@@ -1,0 +1,232 @@
+$page-bg: var(--primary-background-color);
+$column-bg: #f0f3f7;
+$card-bg: #ffffff;
+$border: var(--ui-border-color, #d0d4e4);
+
+.kanbanRoot {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px 24px;
+  height: 100vh;
+  background: $page-bg;
+  font-family: var(--font-family);
+  overflow: hidden;
+}
+
+.headerRow {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.headerCopy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.kanbanBody {
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  align-items: stretch;
+  flex: 1;
+  min-height: 0;
+}
+
+.columnWrapper {
+  flex: 0 0 300px;
+  max-width: 300px;
+  display: flex;
+  min-height: 0;
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  background: $column-bg;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  transition: box-shadow 120ms ease, transform 120ms ease;
+  flex: 1;
+  min-height: 0;
+}
+
+.columnOver {
+  box-shadow: 0 0 0 2px var(--primary-color),
+    0 8px 24px rgba(15, 23, 42, 0.12);
+}
+
+.columnHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  height: 40px;
+  padding: 0 8px 0 14px;
+  background: var(--column-accent, #c4c4c4);
+  color: #ffffff;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.columnTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+  color: inherit;
+
+  h3 {
+    color: inherit !important;
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+  }
+}
+
+.columnCount {
+  font-size: 13px;
+  font-weight: 600;
+  opacity: 0.85;
+  margin-left: 2px;
+}
+
+.columnHeader .addButton {
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  min-height: 24px;
+  flex-shrink: 0;
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 6px;
+  transition: background 120ms ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.32);
+  }
+
+  svg {
+    width: 14px;
+    height: 14px;
+  }
+}
+
+.cardList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.emptyHint {
+  padding: 16px 12px;
+  text-align: center;
+  border: 1px dashed $border;
+  border-radius: 8px;
+  background: $card-bg;
+  color: var(--secondary-text-color);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: $card-bg;
+  border: 1px solid $border;
+  border-radius: 6px;
+  padding: 12px 14px;
+  cursor: grab;
+  transition: box-shadow 120ms ease, transform 120ms ease,
+    border-color 120ms ease, opacity 120ms ease;
+  touch-action: none;
+  user-select: none;
+
+  &:hover {
+    border-color: var(--primary-color);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04),
+      0 4px 12px rgba(15, 23, 42, 0.08);
+  }
+
+  &:active {
+    cursor: grabbing;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+  }
+}
+
+.cardDragging {
+  opacity: 0.35;
+  cursor: grabbing;
+}
+
+.cardDragOverlay {
+  cursor: grabbing;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18);
+  border-color: var(--primary-color);
+  transform: rotate(2deg);
+  width: 280px;
+}
+
+.cardTopRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.cardTitle {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.cardId {
+  color: var(--secondary-text-color);
+  font-size: 12px;
+}
+
+.fragranceList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.cardFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid $border;
+}
+
+.quantity {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 600;
+}
+
+.loadingWrap,
+.errorWrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 320px;
+}

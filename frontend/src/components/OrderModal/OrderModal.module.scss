@@ -1,0 +1,71 @@
+.modalBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-large, 24px);
+  padding: var(--space-medium, 16px) 0;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-small, 8px);
+}
+
+.sectionHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.fieldGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-medium, 16px);
+
+  @media (max-width: 560px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.fieldStack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-medium, 16px);
+}
+
+.fragranceRow {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: var(--space-medium, 16px);
+}
+
+.fragranceLabel {
+  color: var(--secondary-text-color);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.fragranceError {
+  color: var(--negative-color);
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-small, 8px);
+  padding-top: var(--space-medium, 16px);
+  border-top: 1px solid var(--ui-border-color);
+}
+
+.fallbackNotice {
+  font-size: 12px;
+  color: var(--secondary-text-color);
+}
+
+.submitError {
+  margin-top: var(--space-small, 8px);
+}

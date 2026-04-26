@@ -1,0 +1,151 @@
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 8px 0 16px;
+}
+
+.statusRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.statusPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 16px;
+  background: var(--accent, #c4c4c4);
+  color: #fff;
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sectionLabel {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--secondary-text-color);
+}
+
+.metaGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 24px;
+}
+
+.metaCell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.metaLabel {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--secondary-text-color);
+}
+
+.metaValue {
+  font-size: 14px;
+  color: var(--primary-text-color);
+  word-break: break-word;
+}
+
+.fragranceList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fragranceCard {
+  display: flex;
+  gap: 12px;
+  padding: 10px;
+  border: 1px solid var(--ui-border-color);
+  border-radius: 8px;
+  background: var(--primary-background-color);
+}
+
+.fragranceImage {
+  width: 56px;
+  height: 56px;
+  border-radius: 6px;
+  background-size: cover;
+  background-position: center;
+  background-color: #eef0f5;
+  flex: 0 0 56px;
+}
+
+.fragranceBody {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  flex: 1;
+}
+
+.fragranceTopRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.fragranceCategory {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--secondary-background-color, #f0f3f7);
+  border: 1px solid var(--ui-border-color);
+  color: var(--primary-text-color);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.fragranceMissing {
+  font-style: italic;
+  color: var(--secondary-text-color);
+}
+
+.inscription {
+  padding: 10px 12px;
+  background: var(--secondary-background-color, #f0f3f7);
+  border-left: 3px solid var(--primary-color);
+  border-radius: 6px;
+  font-style: italic;
+  white-space: pre-wrap;
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid var(--ui-border-color);
+}
+
+.footerLeft {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.timestamp {
+  font-size: 12px;
+  color: var(--secondary-text-color);
+}

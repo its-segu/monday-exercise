@@ -1,0 +1,31 @@
+{
+  "name": "candle-box-production-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Custom Board View for the Candle Gift Box Production Builder (Vite + React + Vibe).",
+  "scripts": {
+    "start": "npm run stop && concurrently \"npm run server\" \"npm run expose\"",
+    "server": "vite",
+    "expose": "mapps tunnel:create -p 8301",
+    "stop": "kill-port 8301 4049 4040",
+    "deploy:build": "vite build",
+    "deploy:push": "mapps code:push --client-side -d \"build\"",
+    "deploy": "npm run deploy:build && npm run deploy:push"
+  },
+  "dependencies": {
+    "@dnd-kit/core": "^6.3.1",
+    "@vibe/core": "^3.19.0",
+    "monday-sdk-js": "^0.5.5",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@mondaycom/apps-cli": "^4.9.2",
+    "@vitejs/plugin-react": "^4.3.2",
+    "concurrently": "^5.2.0",
+    "cross-port-killer": "^1.2.1",
+    "sass": "^1.54.8",
+    "vite": "^6.2.2"
+  }
+}
