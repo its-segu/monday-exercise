@@ -322,6 +322,99 @@ export async function createOrderItem(boardId, payload, fragranceNames) {
 }
 
 /**
+ * Pull every status-column change on the board for the last `days` days.
+ *
+ * Why we read raw activity_logs instead of a derived "Completed at" board
+ * column: monday's no-code Formula columns can't reach status-change history,
+ * but the activity log already captures every transition with a server-side
+ * timestamp — so we get a "completed at" for free for every order without
+ * touching the board schema.
+ *
+ * Returns the parsed log rows with the most useful fields lifted out:
+ *   { itemId, createdAt, fromLabel, toLabel }
+ */
+export async function getStatusChangeHistory(boardId, { days = 90 } = {}) {
+  const fromIso = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+  const query = `
+    query ($boardId: [ID!], $from: ISO8601DateTime, $columnIds: [String]) {
+      boards(ids: $boardId) {
+        activity_logs(
+          from: $from
+          column_ids: $columnIds
+          limit: 10000
+        ) {
+          id
+          event
+          data
+          entity
+          created_at
+        }
+      }
+    }
+  `;
+
+  const data = await gql(query, {
+    boardId: [String(boardId)],
+    from: fromIso,
+    columnIds: [COLUMN_IDS.status],
+  });
+
+  const rows = data?.boards?.[0]?.activity_logs || [];
+  return rows
+    .map((row) => parseStatusLog(row))
+    .filter((row) => row && row.itemId && row.toLabel);
+}
+
+// `created_at` from activity_logs comes back as a stringified epoch in
+// microseconds (monday-style: 17144040000000000). Normalize to milliseconds.
+function activityTimestampToMs(raw) {
+  if (raw == null) return null;
+  const n = Number(raw);
+  if (Number.isFinite(n)) {
+    if (n > 1e15) return Math.floor(n / 1000);
+    if (n > 1e12) return n;
+    if (n > 1e9) return n * 1000;
+  }
+  const parsed = Date.parse(String(raw));
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function extractStatusLabel(node) {
+  if (!node) return null;
+  if (typeof node === "string") return node;
+  if (node.label?.text) return node.label.text;
+  if (node.text) return node.text;
+  if (node.value?.label?.text) return node.value.label.text;
+  return null;
+}
+
+function parseStatusLog(row) {
+  if (!row?.data) return null;
+  let parsed;
+  try {
+    parsed = JSON.parse(row.data);
+  } catch {
+    return null;
+  }
+  if (parsed.column_id && parsed.column_id !== COLUMN_IDS.status) return null;
+
+  const itemId = parsed.pulse_id ?? parsed.item_id ?? parsed.entity_id;
+  if (!itemId) return null;
+
+  const toLabel = extractStatusLabel(parsed.value);
+  const fromLabel = extractStatusLabel(parsed.previous_value);
+  const ts = activityTimestampToMs(row.created_at);
+  if (!ts) return null;
+
+  return {
+    itemId: String(itemId),
+    createdAt: ts,
+    fromLabel,
+    toLabel,
+  };
+}
+
+/**
  * Move an item to a new status by writing the status column's label.
  * Used for kanban drag-and-drop.
  */

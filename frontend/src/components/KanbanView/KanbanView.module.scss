@@ -27,6 +27,13 @@ $border: var(--ui-border-color, #d0d4e4);
   gap: 4px;
 }
 
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
 .kanbanBody {
   display: flex;
   gap: 16px;

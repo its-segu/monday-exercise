@@ -24,6 +24,7 @@ import KanbanColumn from "./KanbanColumn";
 import { OrderCardOverlay } from "./OrderCard";
 import OrderModal from "../OrderModal/OrderModal";
 import OrderDetailsModal from "../OrderDetailsModal/OrderDetailsModal";
+import AnalyticsModal from "../AnalyticsModal/AnalyticsModal";
 import styles from "./KanbanView.module.scss";
 
 function getFallbackBoardId() {
@@ -42,6 +43,7 @@ export default function KanbanView() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [analyticsOpen, setAnalyticsOpen] = useState(false);
   const [activeOrder, setActiveOrder] = useState(null);
   const [detailsOrderId, setDetailsOrderId] = useState(null);
   const reloadTimer = useRef(null);
@@ -242,14 +244,24 @@ export default function KanbanView() {
             Track candle gift box orders from intake through shipping
           </Text>
         </div>
-        <Button
-          size="medium"
-          kind="primary"
-          onClick={() => setModalOpen(true)}
-          disabled={!boardId}
-        >
-          + New order
-        </Button>
+        <div className={styles.headerActions}>
+          <Button
+            size="medium"
+            kind="secondary"
+            onClick={() => setAnalyticsOpen(true)}
+            disabled={!boardId}
+          >
+            Analytics
+          </Button>
+          <Button
+            size="medium"
+            kind="primary"
+            onClick={() => setModalOpen(true)}
+            disabled={!boardId}
+          >
+            + New order
+          </Button>
+        </div>
       </header>
 
       {error && (
@@ -299,6 +311,12 @@ export default function KanbanView() {
         show={Boolean(detailsOrderId)}
         order={detailsOrder}
         onClose={() => setDetailsOrderId(null)}
+      />
+
+      <AnalyticsModal
+        show={analyticsOpen}
+        boardId={boardId}
+        onClose={() => setAnalyticsOpen(false)}
       />
     </div>
   );
