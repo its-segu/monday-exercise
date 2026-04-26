@@ -176,13 +176,49 @@ cd ../backend
 npm run deploy             # mapps code:push
 ```
 
-After deploying:
+### App version model
+
+`mapps code:push` writes to whichever app version is currently the latest
+draft. You **create** new app versions in the Developer Center (Build →
+Versions → "+ New version"); the CLI can only list and push. Once a version
+is promoted to **Live**, you can keep pushing fresh bundles to it — the URL
+on the Feature is stable per-version, but each push creates a new immutable
+build artifact behind it (visible via `mapps app-version:builds -i <id>`).
+
+### Production env vars
+
+The deployed frontend needs to talk to the deployed backend, not localhost:
+
+```bash
+# frontend/.env.production.local  (gitignored, only loaded by `vite build`)
+VITE_FRAGRANCE_API_URL=https://<your-monday-code-backend>.monday.app
+
+# Belt-and-suspenders: ensure no dev token leaks into the production bundle
+VITE_DEV_API_TOKEN=
+VITE_DEV_BOARD_ID=
+```
+
+The dev-token guard in `lib/monday.js` already short-circuits in production
+builds (`import.meta.env.DEV`), so the second block is purely defensive.
+
+### OAuth scopes
+
+The deployed app authenticates via OAuth (not your personal token). In the
+Developer Center → **Build → OAuth & Permissions**, add:
+
+- `boards:read` — required for `items_page`
+- `boards:write` — required for `create_item` and `change_simple_column_value`
+- `me:read` — optional, used by the SDK to identify the current user
+
+If you skip these, deployed installs will fail with
+`"Unauthorized field or type"` on every monday.api call.
+
+### Going live
 
 1. In the Developer Center, set the board view feature's URL to the deployed
-   CDN URL printed by `mapps code:push --client-side`.
-2. Set the frontend's `VITE_FRAGRANCE_API_URL` to the deployed monday-code
-   backend URL and re-deploy the frontend.
-3. Promote the draft to **Live** so the app is published to the workspace.
+   CDN URL (printed by `mapps code:push --client-side`).
+2. Promote the draft to **Live**. The app then appears in the workspace's
+   App Marketplace, ready to install on a board.
 
 ## Automation setup (manual, in monday's UI)
 
@@ -234,9 +270,18 @@ Then paste the IDs into `boardConstants.js` and re-deploy the frontend.
   Details modal pulls fragrance metadata into a rich ingredient card the
   table can't show, while a "View in monday" button still hands off to the
   native Item Card for first-party editing.
+- **Catalog ↔ board sync** — the create-order mutation passes
+  `create_labels_if_missing: true` to the dropdown column, so any fragrance
+  added through the backend's CRUD API is automatically adopted as a valid
+  board label the first time it's selected. No manual schema edits.
 - **Resilient by design** — the frontend ships a bundled fragrance catalog
   it falls back to whenever the API is unreachable, so the Kanban never
   breaks even if the backend is down.
+- **Schema-version-agnostic queries** — `getOrderItems` deliberately avoids
+  inline GraphQL fragments on `column_values` (which monday's iframe proxy
+  doesn't always honor across API versions) and instead parses the raw
+  `value` JSON in client code. Works on every version monday currently
+  serves.
 
 ## Submission
 
