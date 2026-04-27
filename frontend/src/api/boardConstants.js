@@ -25,6 +25,7 @@ export const COLUMN_IDS = {
 export const STATUS_LABELS = {
   newOrder: "New Order",
   workingOnIt: "Working on it",
+  ship: "Ship",
   done: "Done",
   stuck: "Stuck",
 };
@@ -35,6 +36,14 @@ export const STATUS_LABELS = {
 export const STATUS_ORDER = [
   STATUS_LABELS.newOrder,
   STATUS_LABELS.workingOnIt,
+  STATUS_LABELS.ship,
   STATUS_LABELS.done,
   STATUS_LABELS.stuck,
 ];
+
+/**
+ * Statuses that count as "production complete" for SLA purposes.
+ * The production team's clock stops when an order reaches Ship (handed to
+ * the carrier) — actual delivery time is out of their control.
+ */
+export const COMPLETED_STATUSES = [STATUS_LABELS.ship, STATUS_LABELS.done];

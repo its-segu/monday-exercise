@@ -1,12 +1,26 @@
 import React from "react";
-import { Heading, Text, Chips } from "@vibe/core";
+import { Heading, Text } from "@vibe/core";
 import { useDraggable } from "@dnd-kit/core";
 import styles from "./KanbanView.module.scss";
 
-const CHIP_COLORS = ["primary", "positive", "negative", "warning", "secondary"];
+const TAG_PALETTE = [
+  { bg: "rgba(0, 115, 234, 0.16)", fg: "#0060b9" },   // monday blue
+  { bg: "rgba(0, 200, 117, 0.18)", fg: "#007a47" },   // green
+  { bg: "rgba(253, 171, 61, 0.24)", fg: "#a96400" },  // yellow/orange
+  { bg: "rgba(223, 47, 74, 0.16)", fg: "#b51c39" },   // red
+  { bg: "rgba(163, 88, 223, 0.18)", fg: "#7b3ad6" },  // purple
+  { bg: "rgba(255, 21, 138, 0.14)", fg: "#c41273" },  // lipstick
+  { bg: "rgba(0, 200, 200, 0.18)", fg: "#007e7e" },   // teal
+  { bg: "rgba(127, 83, 71, 0.18)", fg: "#5e3d33" },   // brown
+];
 
-function chipColor(index) {
-  return CHIP_COLORS[index % CHIP_COLORS.length];
+function tagColorFor(label) {
+  const text = String(label || "");
+  let hash = 0;
+  for (let i = 0; i < text.length; i++) {
+    hash = (hash * 31 + text.charCodeAt(i)) >>> 0;
+  }
+  return TAG_PALETTE[hash % TAG_PALETTE.length];
 }
 
 function relativeTime(iso) {
@@ -30,7 +44,7 @@ function CardBody({ order, dragging }) {
     <>
       <div className={styles.cardTopRow}>
         <div className={styles.cardTitle}>
-          <Heading type="h3" weight="bold" maxLines={1}>
+          <Heading type="h3" weight="medium" maxLines={1}>
             {name || "Untitled order"}
           </Heading>
           <Text type="text2" className={styles.cardId}>
@@ -41,15 +55,18 @@ function CardBody({ order, dragging }) {
 
       {fragrances.length > 0 && (
         <div className={styles.fragranceList}>
-          {fragrances.map((label, idx) => (
-            <Chips
-              key={`${id}-${label}-${idx}`}
-              label={label}
-              color={chipColor(idx)}
-              readOnly
-              noAnimation
-            />
-          ))}
+          {fragrances.map((label, idx) => {
+            const palette = tagColorFor(label);
+            return (
+              <span
+                key={`${id}-${label}-${idx}`}
+                className={styles.tag}
+                style={{ "--tag-bg": palette.bg, "--tag-fg": palette.fg }}
+              >
+                {label}
+              </span>
+            );
+          })}
         </div>
       )}
 

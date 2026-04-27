@@ -365,15 +365,26 @@ export async function getStatusChangeHistory(boardId, { days = 90 } = {}) {
     .filter((row) => row && row.itemId && row.toLabel);
 }
 
-// `created_at` from activity_logs comes back as a stringified epoch in
-// microseconds (monday-style: 17144040000000000). Normalize to milliseconds.
+// `created_at` from activity_logs comes back as a stringified integer
+// epoch, but the unit varies by API version. Empirically it's been seen
+// as 100-nanosecond ticks (e.g. 17144040000000000 for April 2024),
+// microseconds, or already-milliseconds. Normalize to ms by magnitude
+// so we don't have to guess the schema version up front:
+//
+//   ~1.7e18  →  nanoseconds            (÷ 1e6)
+//   ~1.7e16  →  100-nanosecond ticks   (÷ 1e4)   ← monday's current shape
+//   ~1.7e15  →  microseconds           (÷ 1e3)
+//   ~1.7e12  →  milliseconds           (no-op)
+//   ~1.7e9   →  seconds                (× 1e3)
 function activityTimestampToMs(raw) {
   if (raw == null) return null;
   const n = Number(raw);
-  if (Number.isFinite(n)) {
-    if (n > 1e15) return Math.floor(n / 1000);
-    if (n > 1e12) return n;
-    if (n > 1e9) return n * 1000;
+  if (Number.isFinite(n) && n > 0) {
+    if (n > 1e17) return Math.round(n / 1e6);
+    if (n > 1e15) return Math.round(n / 1e4);
+    if (n > 1e13) return Math.round(n / 1e3);
+    if (n > 1e11) return n;
+    if (n > 1e8) return n * 1e3;
   }
   const parsed = Date.parse(String(raw));
   return Number.isFinite(parsed) ? parsed : null;

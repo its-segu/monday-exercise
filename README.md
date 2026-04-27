@@ -10,9 +10,10 @@ Built as a take-home assessment for monday.com.
 ## What's in the app
 
 - **Custom Board View — "Production Pipeline"**: a purpose-built Kanban that
-  groups items by status, renders order-shaped cards (customer + fragrance
-  chips + qty + relative time), and exposes a primary "+ New order" action on
-  the first column.
+  groups items by status (New Order → Working on it → Ship → Done, plus
+  Stuck), renders order-shaped cards (customer + fragrance chips + qty +
+  relative time), and exposes a primary "+ New order" action on the first
+  column.
 - **Drag-and-drop status updates** (`@dnd-kit/core`): drag a card across
   columns to call `change_simple_column_value` on the status column.
   Optimistic UI; rolls back on failure.
@@ -30,7 +31,10 @@ Built as a take-home assessment for monday.com.
   from monday's `activity_logs` and computes turnaround, on-time rate,
   throughput, and a past-SLA list — all client-side, with **zero board
   schema changes** required. SLA target lives in
-  `frontend/src/lib/sla.js` so it's a one-line tweak.
+  `frontend/src/lib/sla.js` so it's a one-line tweak. The SLA clock stops
+  at **Ship** (production-complete) so carrier transit time doesn't
+  penalize the production team — see `COMPLETED_STATUSES` in
+  `frontend/src/api/boardConstants.js`.
 - **Fragrance CRUD API** on monday-code: tiny Express service backed by
   `@mondaycom/apps-sdk` Storage. Auto-seeds 10 starter fragrances on first
   boot. Falls back to an in-memory store when no `MONDAY_TOKEN` is set so the
@@ -109,13 +113,22 @@ the platform inventory at a glance.
   added through the backend's CRUD API is auto-adopted as a board label
 - `monday.execute("notice")` — Vibe toast for success/warning/error feedback
 
-### 5. monday's no-code recipe automation fires
-> *"When status changes to **New Order**, notify **Production Manager** that
-> **{Item Name}** needs production."*
+### 5. monday's no-code automations fire
+Three automations run on the live Production Orders board. All are
+configured in monday's no-code Automate menu — no code in this repo
+creates them. See [Automation setup](#automation-setup-manual-in-mondays-ui).
 
-Configured manually on the live board — see [Automation setup](#automation-setup-manual-in-mondays-ui).
+- *When status changes to **New Order**, notify **subscribers** that
+  **{Item Name}** needs production.* — the must-have automation.
+- *When a column changes in this board, notify **subscribers** that
+  **{Item Name}** was updated.* — keeps stakeholders in sync when an
+  order is edited via the native item card.
+- *When an item is deleted from this board, notify **subscribers** that
+  **{Item Name}** was deleted.* — captures the item name before removal
+  so the notification is still meaningful.
+
 monday's automation engine watches the event stream and fires the
-notification without any code from us. This is the must-have automation.
+notifications without any code from us.
 
 ### 6. Production manager works through the pipeline
 - Drag-and-drop (`@dnd-kit/core` PointerSensor + KeyboardSensor) →
@@ -148,7 +161,7 @@ notification without any code from us. This is the must-have automation.
 | **monday CDN** | hosts the client-side bundle (via `mapps code:push --client-side`) |
 | **monday tunnel** (`mapps tunnel:create`) | dev-time HTTPS exposure for the Vite server |
 | **monday Vibe** | `Modal`, `ModalContent`, `Button`, `Heading`, `Text`, `Loader`, `AttentionBox`, plus form primitives |
-| **monday no-code Automations** | recipe-sentence on the live Production Orders board |
+| **monday no-code Automations** | three custom automations on the live Production Orders board (new order, item updated, item deleted) |
 | **monday OAuth scopes** | `boards:read`, `boards:write`, `me:read` (deployed installs) |
 | **monday Item Card** | reused for native editing via `monday.execute("openItemCard")` |
 
@@ -379,23 +392,57 @@ If you skip these, deployed installs will fail with
 
 ## Automation setup (manual, in monday's UI)
 
-The take-home asks for "at least one automation." This is configured in
-monday's no-code automation builder, not in code:
+The take-home asks for "at least one automation." All three below are
+configured in monday's no-code automation builder, directly on the
+Production Orders board — there is no automation code in this repo.
 
-1. Open the **Production Orders** board.
-2. Click **Automate** → **Create custom automation**.
-3. Choose the recipe:
-   `When status changes to [New Order], notify [Production Manager] that
-    [Item Name] needs production`.
-4. Save. New orders created via our Kanban modal automatically trigger the
-   notification because they land on the board with status set to "New Order".
+For each one: open the board → click **Automate** (top-right) →
+**+ Create custom automation** → fill in the sentence shown → **Create
+automation**.
 
-Other recipes that work well with this board:
+### 1. New order notification — must-have
 
-- `When status changes to Done, set Order Complete Date to today` — drives
-  the "Order Turnaround" formula column.
-- `Every day at 9:00 AM, notify [Production Manager] that orders in [Stuck]
-  need attention`.
+> When **status** changes to **New Order**, notify **subscribers** that
+> **{Item Name}** needs production.
+
+Fires every time our Kanban intake modal creates an order, because the
+form lands the new item with status set to "New Order" (see
+`createOrderItem` in `frontend/src/api/boardQueries.js`).
+
+### 2. Item updated notification
+
+> When **a column changes** in this board, notify **subscribers** that
+> **{Item Name}** was updated.
+
+Fires whenever an order is edited — either via drag-and-drop in our
+Kanban (status change) or via the native item card after a designer
+clicks **Open in Monday** on the order details modal.
+
+### 3. Item deleted notification
+
+> When **an item is deleted** from this board, notify **subscribers**
+> that **{Item Name}** was deleted.
+
+Fires when an order is removed via the native item card. monday captures
+the item name before the row is removed so the notification still
+identifies which order disappeared.
+
+### Why "subscribers" instead of a named user
+
+Picking **subscribers** as the recipient means everyone added to the
+board receives the notification, not just one hard-coded user. As the
+customer's team grows, the automation scales without reconfiguration.
+For a single-user trial workspace, the only subscriber is you — so the
+notifications still reach you during the demo.
+
+### Other automations that pair well with this board
+
+If the customer wants to extend further, these are zero-code additions:
+
+- `When status changes to Done, set Order Complete Date to today` —
+  drives any "Order Turnaround" formula column you choose to add.
+- `Every day at 9:00 AM, notify subscribers that orders in [Stuck]
+  need attention` — surfaces stalled work without manual triage.
 
 ## Updating column IDs
 

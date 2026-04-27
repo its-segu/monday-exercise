@@ -1,11 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  Heading,
-  Text,
-  Loader,
-  AttentionBox,
-  Button,
-} from "@vibe/core";
+import { Heading, Loader, AttentionBox, Button } from "@vibe/core";
 import {
   DndContext,
   DragOverlay,
@@ -240,9 +234,6 @@ export default function KanbanView() {
           <Heading type="h1" weight="bold">
             Production Pipeline
           </Heading>
-          <Text type="text1" color="secondary">
-            Track candle gift box orders from intake through shipping
-          </Text>
         </div>
         <div className={styles.headerActions}>
           <Button

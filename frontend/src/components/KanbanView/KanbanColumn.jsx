@@ -8,6 +8,7 @@ import styles from "./KanbanView.module.scss";
 const STATUS_COLORS = {
   "New Order": "#579bfc",
   "Working on it": "#fdab3d",
+  Ship: "#a358df",
   Done: "#00c875",
   Stuck: "#df2f4a",
 };

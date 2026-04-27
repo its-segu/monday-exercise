@@ -1,4 +1,6 @@
-import { STATUS_LABELS } from "../api/boardConstants";
+import { COMPLETED_STATUSES } from "../api/boardConstants";
+
+const COMPLETED_SET = new Set(COMPLETED_STATUSES);
 
 /**
  * SLA target in days, measured from item creation to the first transition
@@ -21,21 +23,24 @@ const toMs = (raw) => {
 };
 
 /**
- * Walk every status-change row and pick the *earliest* transition into
- * "Done" per item. We treat the first time it hit Done as the completion
- * moment; later flips back-and-forth (rework) don't reset the SLA clock,
- * which is the more forgiving and customer-friendly read.
+ * Walk every status-change row and pick the *earliest* transition into a
+ * production-complete status (Ship or Done) per item. The production team's
+ * clock stops when the order is handed to shipping — carrier transit time
+ * is out of their control, so we don't keep counting after Ship.
+ *
+ * Later flips back-and-forth (rework) don't reset the SLA clock, which is
+ * the more forgiving and customer-friendly read.
  */
 function buildCompletedAtIndex(statusHistory) {
-  const earliestDoneAt = new Map();
+  const earliestCompletedAt = new Map();
   for (const row of statusHistory) {
-    if (row.toLabel !== STATUS_LABELS.done) continue;
-    const prev = earliestDoneAt.get(row.itemId);
+    if (!COMPLETED_SET.has(row.toLabel)) continue;
+    const prev = earliestCompletedAt.get(row.itemId);
     if (prev == null || row.createdAt < prev) {
-      earliestDoneAt.set(row.itemId, row.createdAt);
+      earliestCompletedAt.set(row.itemId, row.createdAt);
     }
   }
-  return earliestDoneAt;
+  return earliestCompletedAt;
 }
 
 /**
@@ -57,8 +62,8 @@ export function decorateOrdersWithSla(
   return (orders || []).map((order) => {
     const createdMs = toMs(order.createdAt);
     const completedMs = completedAtById.get(String(order.id)) ?? null;
-    const isDone = order.statusLabel === STATUS_LABELS.done;
-    const isInFlight = !isDone;
+    const isCompleted = COMPLETED_SET.has(order.statusLabel);
+    const isInFlight = !isCompleted;
 
     let turnaroundDays = null;
     if (createdMs != null && completedMs != null && completedMs >= createdMs) {

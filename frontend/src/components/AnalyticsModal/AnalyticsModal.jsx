@@ -1,13 +1,15 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Modal,
   ModalContent,
   Heading,
   Text,
   Button,
+  IconButton,
   Loader,
   AttentionBox,
 } from "@vibe/core";
+import { Retry } from "@vibe/icons";
 import {
   getOrderItems,
   getStatusChangeHistory,
@@ -25,50 +27,71 @@ import styles from "./AnalyticsModal.module.scss";
 const STATUS_COLORS = {
   [STATUS_LABELS.newOrder]: "#579bfc",
   [STATUS_LABELS.workingOnIt]: "#fdab3d",
+  [STATUS_LABELS.ship]: "#a358df",
   [STATUS_LABELS.done]: "#00c875",
   [STATUS_LABELS.stuck]: "#df2f4a",
 };
 
 export default function AnalyticsModal({ show, boardId, onClose }) {
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [orders, setOrders] = useState([]);
   const [history, setHistory] = useState([]);
+  const [lastRefreshedAt, setLastRefreshedAt] = useState(null);
+  const cancelRef = useRef(false);
 
-  useEffect(() => {
-    if (!show || !boardId) return;
-    let cancelled = false;
-    setLoading(true);
-    setError(null);
+  const fetchData = useCallback(
+    async ({ silent = false } = {}) => {
+      if (!boardId) return;
+      cancelRef.current = false;
+      if (silent) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+      setError(null);
 
-    Promise.all([
-      getOrderItems(boardId),
-      getStatusChangeHistory(boardId, { days: 90 }).catch((err) => {
-        // Activity logs require boards:read on the deployed app and a recent
-        // enough API version; if it fails, we still render the snapshot
-        // metrics from items_page so the modal degrades gracefully.
-        // eslint-disable-next-line no-console
-        console.warn("[AnalyticsModal] activity_logs unavailable:", err?.message);
-        return [];
-      }),
-    ])
-      .then(([orderItems, statusHistory]) => {
-        if (cancelled) return;
+      try {
+        const [orderItems, statusHistory] = await Promise.all([
+          getOrderItems(boardId),
+          getStatusChangeHistory(boardId, { days: 90 }).catch((err) => {
+            // Activity logs require boards:read on the deployed app and a
+            // recent enough API version; if it fails, we still render the
+            // snapshot metrics from items_page so the modal degrades
+            // gracefully.
+            // eslint-disable-next-line no-console
+            console.warn(
+              "[AnalyticsModal] activity_logs unavailable:",
+              err?.message
+            );
+            return [];
+          }),
+        ]);
+        if (cancelRef.current) return;
         setOrders(orderItems || []);
         setHistory(statusHistory || []);
-      })
-      .catch((err) => {
-        if (cancelled) return;
+        setLastRefreshedAt(Date.now());
+      } catch (err) {
+        if (cancelRef.current) return;
         setError(err.message || "Could not load analytics");
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
+      } finally {
+        if (!cancelRef.current) {
+          setLoading(false);
+          setRefreshing(false);
+        }
+      }
+    },
+    [boardId]
+  );
 
+  useEffect(() => {
+    if (!show || !boardId) return undefined;
+    fetchData();
     return () => {
-      cancelled = true;
+      cancelRef.current = true;
     };
-  }, [show, boardId]);
+  }, [show, boardId, fetchData]);
 
   const decorated = useMemo(
     () => decorateOrdersWithSla(orders, history, { targetDays: SLA_TARGET_DAYS }),
@@ -104,6 +127,24 @@ export default function AnalyticsModal({ show, boardId, onClose }) {
     >
       <ModalContent>
         <div className={styles.body}>
+          <div className={styles.headerRow}>
+            <Text type="text2" color="secondary">
+              {lastRefreshedAt
+                ? `Updated ${formatRelativeTime(lastRefreshedAt)}`
+                : "Loading live data…"}
+            </Text>
+            <IconButton
+              icon={Retry}
+              size="small"
+              kind="tertiary"
+              ariaLabel="Refresh analytics"
+              tooltipContent="Refresh"
+              onClick={() => fetchData({ silent: true })}
+              disabled={loading || refreshing || !boardId}
+              className={refreshing ? styles.refreshing : undefined}
+            />
+          </div>
+
           {loading && (
             <div className={styles.loadingWrap}>
               <Loader size="medium" />
@@ -235,6 +276,15 @@ export default function AnalyticsModal({ show, boardId, onClose }) {
       </ModalContent>
     </Modal>
   );
+}
+
+function formatRelativeTime(ms) {
+  if (!ms) return "";
+  const diff = Date.now() - ms;
+  if (diff < 5_000) return "just now";
+  if (diff < 60_000) return `${Math.round(diff / 1000)}s ago`;
+  if (diff < 60 * 60_000) return `${Math.round(diff / 60_000)}m ago`;
+  return new Date(ms).toLocaleTimeString();
 }
 
 function MetricCard({ label, value, hint, tone = "neutral" }) {
