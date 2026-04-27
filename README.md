@@ -25,6 +25,12 @@ Built as a take-home assessment for monday.com.
   Fragrance API and renders it as a rich ingredient card. A "View in monday"
   button hands off to `monday.execute("openItemCard")` for first-party editing
   (status, dates, files, comments, automations).
+- **Analytics modal — production performance**: a second header button
+  ("Analytics") opens a Vibe modal that derives every order's `completed_at`
+  from monday's `activity_logs` and computes turnaround, on-time rate,
+  throughput, and a past-SLA list — all client-side, with **zero board
+  schema changes** required. SLA target lives in
+  `frontend/src/lib/sla.js` so it's a one-line tweak.
 - **Fragrance CRUD API** on monday-code: tiny Express service backed by
   `@mondaycom/apps-sdk` Storage. Auto-seeds 10 starter fragrances on first
   boot. Falls back to an in-memory store when no `MONDAY_TOKEN` is set so the
@@ -49,6 +55,7 @@ Built as a take-home assessment for monday.com.
    │   - KanbanView, OrderCard            │───────────────┘
    │   - OrderModal (intake form)         │
    │   - OrderDetailsModal (rich view)    │
+   │   - AnalyticsModal (SLA + throughput)│
    │   - dnd-kit drag-and-drop            │
    │   - Vibe components only             │
    └─────┬────────────────────┬───────────┘
@@ -56,7 +63,8 @@ Built as a take-home assessment for monday.com.
    monday.api (GraphQL)   fetch /api/fragrances
    create_item /              │ (vite proxies /api/* → localhost:8080
    change_simple_column_value │  in dev; deployed URL in prod)
-   items_page                 ▼
+   items_page                 │
+   activity_logs              ▼
          │         ┌────────────────────────────┐
          │         │  backend/ (Express, monday-code)
          │         │  GET/POST/PATCH/DELETE /fragrances
@@ -64,6 +72,95 @@ Built as a take-home assessment for monday.com.
          ▼         └────────────────────────────┘
   Production Orders board (item rows)
 ```
+
+## Monday APIs & components used (end-to-end)
+
+Walk through the user journey from a phone call to shipped analytics.
+Every monday surface we touch is annotated inline so a reviewer can trace
+the platform inventory at a glance.
+
+### 1. The board view loads inside monday's iframe
+- `monday-sdk-js` initialized once in `lib/monday.js`
+- `monday.execute("valueCreatedForUser")` — the value-created handshake
+- `monday.listen("context")` — receives the `boardId` from the parent tab
+- `monday.listen("events")` — subscribes to mutation events (`new_items`,
+  `change_column_values`, `change_specific_column_value`,
+  `change_status_column_value`, `delete_items`) for live refresh
+- Vibe shell: `Heading`, `Text`, `Loader`, `AttentionBox`, `Button`
+
+### 2. Designer queries the board to render the kanban
+- `monday.api()` GraphQL — `boards.items_page` paginated query for orders
+- Schema-version-agnostic: pulls `column_values { id, type, text, value }`
+  and parses raw JSON in `boardQueries.normalizeItem`, sidestepping inline
+  GraphQL fragments that monday's iframe proxy doesn't always honor
+
+### 3. Designer hits "+ New order" — intake modal
+- Vibe components: `Modal`, `ModalContent`, `Button`, plus our
+  `CustomerSection`, `FragranceSection`, `DetailsSection`
+- Catalog read: `GET /fragrances` against our monday-code backend
+  (Express + `@mondaycom/apps-sdk` Storage), with a bundled fallback
+  catalog if the API is unreachable
+
+### 4. Submit — order lands on the live Production Orders board
+- `monday.api()` — `create_item` mutation (just the name, kept minimal
+  for cross-version compatibility)
+- `monday.api()` — sequential `change_simple_column_value` mutations for
+  every column, with `create_labels_if_missing: true` so any fragrance
+  added through the backend's CRUD API is auto-adopted as a board label
+- `monday.execute("notice")` — Vibe toast for success/warning/error feedback
+
+### 5. monday's no-code recipe automation fires
+> *"When status changes to **New Order**, notify **Production Manager** that
+> **{Item Name}** needs production."*
+
+Configured manually on the live board — see [Automation setup](#automation-setup-manual-in-mondays-ui).
+monday's automation engine watches the event stream and fires the
+notification without any code from us. This is the must-have automation.
+
+### 6. Production manager works through the pipeline
+- Drag-and-drop (`@dnd-kit/core` PointerSensor + KeyboardSensor) →
+  `monday.api()` `change_simple_column_value` on the status column
+- Optimistic UI; rolls back to the previous status on API failure
+- Click a card → `OrderDetailsModal` (Vibe `Modal`) reads fragrance
+  metadata from `GET /fragrances` and renders ingredient cards with imagery
+- "Open in Monday" button calls `monday.execute("openItemCard")` to hand
+  off to monday's first-party item panel for files, comments, native
+  columns, and any board-level automations
+
+### 7. Designer checks performance — Analytics button
+- `monday.api()` GraphQL — `boards.activity_logs` (last 90 days, scoped
+  to the status column only) — used to derive `completed_at` per order
+  *without* adding a board column
+- Same `items_page` query for the live pipeline snapshot
+- `lib/sla.js` computes turnaround, on-time rate, throughput per day, and
+  the past-SLA list entirely client-side — single round-trip, no backend
+- Hand-rolled flexbox bars for the throughput chart so we don't pull in a
+  charting library
+
+### Flat reference of every monday surface touched
+
+| Layer | Surfaces |
+|---|---|
+| **monday SDK** (`monday-sdk-js`) | `monday.api()`, `monday.execute()`, `monday.listen()` |
+| **GraphQL API** | `boards`, `items_page`, `column_values`, `activity_logs`, `create_item`, `change_simple_column_value` |
+| **monday-code platform** | hosts the Fragrance API (Express service) |
+| **monday Storage** (`@mondaycom/apps-sdk`) | persists fragrances; in-memory fallback for local dev |
+| **monday CDN** | hosts the client-side bundle (via `mapps code:push --client-side`) |
+| **monday tunnel** (`mapps tunnel:create`) | dev-time HTTPS exposure for the Vite server |
+| **monday Vibe** | `Modal`, `ModalContent`, `Button`, `Heading`, `Text`, `Loader`, `AttentionBox`, plus form primitives |
+| **monday no-code Automations** | recipe-sentence on the live Production Orders board |
+| **monday OAuth scopes** | `boards:read`, `boards:write`, `me:read` (deployed installs) |
+| **monday Item Card** | reused for native editing via `monday.execute("openItemCard")` |
+
+### Where the column IDs and status labels came from
+
+The constants in
+[`frontend/src/api/boardConstants.js`](frontend/src/api/boardConstants.js)
+were captured by running `getBoardSchema()` against the live "Production
+Orders" board (id `18410280508`) — the asset the prompt provided. Nothing
+was assumed. If you install the app on a different account, re-run that
+helper and update the constants — see
+[Updating column IDs](#updating-column-ids).
 
 ## Repo layout
 
@@ -75,9 +172,10 @@ Built as a take-home assessment for monday.com.
 │   │   ├── components/
 │   │   │   ├── KanbanView/        # board, columns, cards, drag overlay
 │   │   │   ├── OrderModal/        # intake form
-│   │   │   └── OrderDetailsModal/ # rich card detail view
+│   │   │   ├── OrderDetailsModal/ # rich card detail view
+│   │   │   └── AnalyticsModal/    # SLA, throughput, past-SLA list
 │   │   ├── data/fragrances.js     # bundled fallback catalog
-│   │   └── lib/                   # monday sdk singleton, validators
+│   │   └── lib/                   # monday sdk singleton, validators, sla math
 │   └── vite.config.js             # /api proxy → http://localhost:8080
 ├── backend/         # Fragrance CRUD API (Express + apps-sdk Storage)
 │   └── src/
@@ -89,6 +187,65 @@ Built as a take-home assessment for monday.com.
 ├── .gitignore       # one root file applied recursively
 └── README.md
 ```
+
+## Commands at a glance
+
+A cheat sheet of every command you'll run, grouped by intent. Detailed
+walkthroughs follow below.
+
+### Run locally (three processes, three terminals)
+
+```bash
+# Terminal 1 — Express backend (Fragrance API) on :8080
+cd backend && npm start
+
+# Terminal 2 — Vite dev server (board view) on :8301
+cd frontend && npm run server
+
+# Terminal 3 — public HTTPS tunnel into Vite, for monday's iframe
+cd frontend && npx mapps tunnel:create -p 8301
+```
+
+### Run locally (one terminal, no monday iframe)
+
+```bash
+cd backend && npm start            # backend on :8080
+cd frontend && npm start           # combined: vite + tunnel via concurrently
+```
+
+### Smoke-test that everything's wired
+
+```bash
+curl http://localhost:8080/health           # backend liveness
+curl http://localhost:8301/api/fragrances   # frontend → backend (proxied)
+curl https://<tunnel-url>/api/fragrances     # tunnel → frontend → backend
+```
+
+### Deploy to monday-code
+
+```bash
+cd frontend && npm run deploy   # vite build + mapps code:push --client-side -d build
+cd backend && npm run deploy    # mapps code:push  (server-side service)
+```
+
+If `mapps code:push` reports "the latest app version is live" and refuses
+to overwrite, either create a new draft version in the Developer Center,
+or pass `--force` (acceptable for take-home / pre-customer iteration):
+
+```bash
+cd frontend && npx mapps code:push --client-side -d build -a <APP_ID> --force
+```
+
+### One-time machine setup
+
+```bash
+npm install -g @mondaycom/apps-cli
+mapps init -t YOUR_PERSONAL_MONDAY_API_TOKEN
+cd backend  && npm install
+cd frontend && npm install
+```
+
+---
 
 ## Local dev
 
