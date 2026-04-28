@@ -25,7 +25,7 @@ function createMemoryStorage() {
   console.warn(
     "[fragranceStore] MONDAY_TOKEN not set — using in-memory storage. " +
       "Data will not persist across restarts. Set MONDAY_TOKEN in backend/.env " +
-      "to use real monday-code Storage."
+      "to use real monday-code Storage.",
   );
   return {
     get: async (key) => ({ value: map.has(key) ? map.get(key) : null }),
@@ -77,7 +77,7 @@ export async function listFragrances() {
       } catch {
         return null;
       }
-    })
+    }),
   );
   return results.filter(Boolean);
 }
@@ -150,19 +150,41 @@ export async function deleteFragrance(id) {
   return true;
 }
 
+/**
+ * Seed runs on every boot and upserts every fragrance from the seed file:
+ *   - New ids are inserted.
+ *   - Existing ids get their fields refreshed (preserving original
+ *     `created_at`, bumping `updated_at`).
+ *
+ * For this take-home there's no production data we need to protect, so a
+ * full overwrite keeps the description/recipe text and image URLs in lockstep
+ * with the source-controlled seed file. If a real customer started editing
+ * records via the API, we'd switch to add-missing-only (or move the seed
+ * behind an admin endpoint).
+ */
 export async function bulkSeedFragrances(fragrances) {
-  const ids = await readIndex();
-  if (ids.length > 0) return { skipped: true, count: ids.length };
   const storage = getStorage();
+  const existingIds = new Set(await readIndex());
   const now = new Date().toISOString();
-  const seeded = fragrances.map((f) => ({
-    ...f,
-    created_at: f.created_at || now,
-    updated_at: f.updated_at || now,
-  }));
-  await Promise.all(
-    seeded.map((f) => storage.set(fragranceKey(f.id), f))
+
+  const seeded = await Promise.all(
+    fragrances.map(async (f) => {
+      const existing = existingIds.has(f.id) ? await getFragrance(f.id) : null;
+      return {
+        ...f,
+        created_at: existing?.created_at || f.created_at || now,
+        updated_at: now,
+      };
+    }),
   );
-  await writeIndex(seeded.map((f) => f.id));
-  return { skipped: false, count: seeded.length };
+
+  await Promise.all(seeded.map((f) => storage.set(fragranceKey(f.id), f)));
+
+  const nextIndex = seeded.map((f) => f.id);
+  await writeIndex(nextIndex);
+
+  const added = nextIndex.filter((id) => !existingIds.has(id)).length;
+  const refreshed = nextIndex.length - added;
+
+  return { skipped: false, added, refreshed, count: nextIndex.length };
 }

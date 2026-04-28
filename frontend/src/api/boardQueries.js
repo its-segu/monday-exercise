@@ -123,7 +123,7 @@ function parseValue(cv) {
 
 function normalizeItem(item) {
   const byId = Object.fromEntries(
-    (item.column_values || []).map((cv) => [cv.id, cv])
+    (item.column_values || []).map((cv) => [cv.id, cv]),
   );
 
   const statusCv = byId[COLUMN_IDS.status];
@@ -301,7 +301,7 @@ export async function createOrderItem(boardId, payload, fragranceNames) {
         `[createOrderItem] could not set "${columnId}" =`,
         value,
         "—",
-        err?.message
+        err?.message,
       );
       failures.push({ columnId, message: err?.message || String(err) });
     }
@@ -310,7 +310,7 @@ export async function createOrderItem(boardId, payload, fragranceNames) {
   if (failures.length) {
     const partial = new Error(
       `Order created but ${failures.length} field(s) failed: ` +
-        failures.map((f) => `${f.columnId} (${f.message})`).join("; ")
+        failures.map((f) => `${f.columnId} (${f.message})`).join("; "),
     );
     partial.partial = true;
     partial.itemId = created.id;
@@ -334,7 +334,9 @@ export async function createOrderItem(boardId, payload, fragranceNames) {
  *   { itemId, createdAt, fromLabel, toLabel }
  */
 export async function getStatusChangeHistory(boardId, { days = 90 } = {}) {
-  const fromIso = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+  const fromIso = new Date(
+    Date.now() - days * 24 * 60 * 60 * 1000,
+  ).toISOString();
   const query = `
     query ($boardId: [ID!], $from: ISO8601DateTime, $columnIds: [String]) {
       boards(ids: $boardId) {

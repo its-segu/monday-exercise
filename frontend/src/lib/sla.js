@@ -54,7 +54,7 @@ function buildCompletedAtIndex(statusHistory) {
 export function decorateOrdersWithSla(
   orders,
   statusHistory,
-  { now = Date.now(), targetDays = SLA_TARGET_DAYS } = {}
+  { now = Date.now(), targetDays = SLA_TARGET_DAYS } = {},
 ) {
   const completedAtById = buildCompletedAtIndex(statusHistory || []);
   const targetMs = targetDays * DAY_MS;
@@ -99,7 +99,10 @@ export function decorateOrdersWithSla(
  * Roll up decorated orders into the metrics the dashboard cares about.
  * Pure function over the array — easy to unit-test if we ever add tests.
  */
-export function summarizeSla(decoratedOrders, { targetDays = SLA_TARGET_DAYS } = {}) {
+export function summarizeSla(
+  decoratedOrders,
+  { targetDays = SLA_TARGET_DAYS } = {},
+) {
   const total = decoratedOrders.length;
   const completed = decoratedOrders.filter((o) => o.completedAt != null);
   const inFlight = decoratedOrders.filter((o) => o.completedAt == null);

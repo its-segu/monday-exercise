@@ -1,0 +1,10 @@
+node_modules
+build
+dist
+coverage
+.env
+.env.*
+*.lock
+package-lock.json
+build.zip
+.DS_Store

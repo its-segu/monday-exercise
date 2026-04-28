@@ -4,14 +4,14 @@ import { useDraggable } from "@dnd-kit/core";
 import styles from "./KanbanView.module.scss";
 
 const TAG_PALETTE = [
-  { bg: "rgba(0, 115, 234, 0.16)", fg: "#0060b9" },   // monday blue
-  { bg: "rgba(0, 200, 117, 0.18)", fg: "#007a47" },   // green
-  { bg: "rgba(253, 171, 61, 0.24)", fg: "#a96400" },  // yellow/orange
-  { bg: "rgba(223, 47, 74, 0.16)", fg: "#b51c39" },   // red
-  { bg: "rgba(163, 88, 223, 0.18)", fg: "#7b3ad6" },  // purple
-  { bg: "rgba(255, 21, 138, 0.14)", fg: "#c41273" },  // lipstick
-  { bg: "rgba(0, 200, 200, 0.18)", fg: "#007e7e" },   // teal
-  { bg: "rgba(127, 83, 71, 0.18)", fg: "#5e3d33" },   // brown
+  { bg: "rgba(0, 115, 234, 0.16)", fg: "#0060b9" }, // monday blue
+  { bg: "rgba(0, 200, 117, 0.18)", fg: "#007a47" }, // green
+  { bg: "rgba(253, 171, 61, 0.24)", fg: "#a96400" }, // yellow/orange
+  { bg: "rgba(223, 47, 74, 0.16)", fg: "#b51c39" }, // red
+  { bg: "rgba(163, 88, 223, 0.18)", fg: "#7b3ad6" }, // purple
+  { bg: "rgba(255, 21, 138, 0.14)", fg: "#c41273" }, // lipstick
+  { bg: "rgba(0, 200, 200, 0.18)", fg: "#007e7e" }, // teal
+  { bg: "rgba(127, 83, 71, 0.18)", fg: "#5e3d33" }, // brown
 ];
 
 function tagColorFor(label) {

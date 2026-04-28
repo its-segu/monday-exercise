@@ -12,10 +12,19 @@ export default function CustomerSection({ values, errors, onChange }) {
   return (
     <section className={styles.section}>
       <header className={styles.sectionHeader}>
-        <Heading type="h3" weight="bold">
-          Customer information
-        </Heading>
-        <Text type="text2" color="secondary">
+        <span className={styles.stepBadge} aria-hidden="true">
+          1
+        </span>
+        <div className={styles.sectionTitle}>
+          <Heading type="h3" weight="bold">
+            Customer information
+          </Heading>
+        </div>
+        <Text
+          type="text2"
+          color="secondary"
+          className={styles.sectionDescription}
+        >
           Where are we shipping this gift box?
         </Text>
       </header>

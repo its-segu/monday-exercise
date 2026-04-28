@@ -7,12 +7,17 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
-    "deploy": "mapps code:push"
+    "deploy": "mapps code:push",
+    "format": "prettier --write \"src/**/*.{js,json,md}\"",
+    "format:check": "prettier --check \"src/**/*.{js,json,md}\""
   },
   "dependencies": {
     "@mondaycom/apps-sdk": "^2.1.2",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.21.0"
+  },
+  "devDependencies": {
+    "prettier": "^3.8.3"
   }
 }

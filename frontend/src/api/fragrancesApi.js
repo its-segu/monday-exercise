@@ -30,10 +30,9 @@ async function request(path, options = {}) {
   });
   if (!res.ok) {
     const text = await res.text().catch(() => "");
-    throw new FragranceApiError(
-      `Fragrance API error ${res.status}: ${text}`,
-      { status: res.status }
-    );
+    throw new FragranceApiError(`Fragrance API error ${res.status}: ${text}`, {
+      status: res.status,
+    });
   }
   if (res.status === 204) return null;
   return res.json();
@@ -53,7 +52,7 @@ export const fragrancesApi = {
       // eslint-disable-next-line no-console
       console.warn(
         "[fragrancesApi] live fetch failed, falling back to bundled catalog:",
-        err?.message || err
+        err?.message || err,
       );
       return { data: BUNDLED_FRAGRANCES, source: "bundled" };
     }

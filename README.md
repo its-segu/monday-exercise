@@ -84,6 +84,7 @@ Every monday surface we touch is annotated inline so a reviewer can trace
 the platform inventory at a glance.
 
 ### 1. The board view loads inside monday's iframe
+
 - `monday-sdk-js` initialized once in `lib/monday.js`
 - `monday.execute("valueCreatedForUser")` — the value-created handshake
 - `monday.listen("context")` — receives the `boardId` from the parent tab
@@ -93,12 +94,14 @@ the platform inventory at a glance.
 - Vibe shell: `Heading`, `Text`, `Loader`, `AttentionBox`, `Button`
 
 ### 2. Designer queries the board to render the kanban
+
 - `monday.api()` GraphQL — `boards.items_page` paginated query for orders
 - Schema-version-agnostic: pulls `column_values { id, type, text, value }`
   and parses raw JSON in `boardQueries.normalizeItem`, sidestepping inline
   GraphQL fragments that monday's iframe proxy doesn't always honor
 
 ### 3. Designer hits "+ New order" — intake modal
+
 - Vibe components: `Modal`, `ModalContent`, `Button`, plus our
   `CustomerSection`, `FragranceSection`, `DetailsSection`
 - Catalog read: `GET /fragrances` against our monday-code backend
@@ -106,6 +109,7 @@ the platform inventory at a glance.
   catalog if the API is unreachable
 
 ### 4. Submit — order lands on the live Production Orders board
+
 - `monday.api()` — `create_item` mutation (just the name, kept minimal
   for cross-version compatibility)
 - `monday.api()` — sequential `change_simple_column_value` mutations for
@@ -114,23 +118,25 @@ the platform inventory at a glance.
 - `monday.execute("notice")` — Vibe toast for success/warning/error feedback
 
 ### 5. monday's no-code automations fire
+
 Three automations run on the live Production Orders board. All are
 configured in monday's no-code Automate menu — no code in this repo
 creates them. See [Automation setup](#automation-setup-manual-in-mondays-ui).
 
-- *When status changes to **New Order**, notify **subscribers** that
-  **{Item Name}** needs production.* — the must-have automation.
-- *When a column changes in this board, notify **subscribers** that
-  **{Item Name}** was updated.* — keeps stakeholders in sync when an
+- _When status changes to **New Order**, notify **subscribers** that
+  **{Item Name}** needs production._ — the must-have automation.
+- _When a column changes in this board, notify **subscribers** that
+  **{Item Name}** was updated._ — keeps stakeholders in sync when an
   order is edited via the native item card.
-- *When an item is deleted from this board, notify **subscribers** that
-  **{Item Name}** was deleted.* — captures the item name before removal
+- _When an item is deleted from this board, notify **subscribers** that
+  **{Item Name}** was deleted._ — captures the item name before removal
   so the notification is still meaningful.
 
 monday's automation engine watches the event stream and fires the
 notifications without any code from us.
 
 ### 6. Production manager works through the pipeline
+
 - Drag-and-drop (`@dnd-kit/core` PointerSensor + KeyboardSensor) →
   `monday.api()` `change_simple_column_value` on the status column
 - Optimistic UI; rolls back to the previous status on API failure
@@ -141,9 +147,10 @@ notifications without any code from us.
   columns, and any board-level automations
 
 ### 7. Designer checks performance — Analytics button
+
 - `monday.api()` GraphQL — `boards.activity_logs` (last 90 days, scoped
   to the status column only) — used to derive `completed_at` per order
-  *without* adding a board column
+  _without_ adding a board column
 - Same `items_page` query for the live pipeline snapshot
 - `lib/sla.js` computes turnaround, on-time rate, throughput per day, and
   the past-SLA list entirely client-side — single round-trip, no backend
@@ -152,18 +159,18 @@ notifications without any code from us.
 
 ### Flat reference of every monday surface touched
 
-| Layer | Surfaces |
-|---|---|
-| **monday SDK** (`monday-sdk-js`) | `monday.api()`, `monday.execute()`, `monday.listen()` |
-| **GraphQL API** | `boards`, `items_page`, `column_values`, `activity_logs`, `create_item`, `change_simple_column_value` |
-| **monday-code platform** | hosts the Fragrance API (Express service) |
-| **monday Storage** (`@mondaycom/apps-sdk`) | persists fragrances; in-memory fallback for local dev |
-| **monday CDN** | hosts the client-side bundle (via `mapps code:push --client-side`) |
-| **monday tunnel** (`mapps tunnel:create`) | dev-time HTTPS exposure for the Vite server |
-| **monday Vibe** | `Modal`, `ModalContent`, `Button`, `Heading`, `Text`, `Loader`, `AttentionBox`, plus form primitives |
-| **monday no-code Automations** | three custom automations on the live Production Orders board (new order, item updated, item deleted) |
-| **monday OAuth scopes** | `boards:read`, `boards:write`, `me:read` (deployed installs) |
-| **monday Item Card** | reused for native editing via `monday.execute("openItemCard")` |
+| Layer                                      | Surfaces                                                                                              |
+| ------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
+| **monday SDK** (`monday-sdk-js`)           | `monday.api()`, `monday.execute()`, `monday.listen()`                                                 |
+| **GraphQL API**                            | `boards`, `items_page`, `column_values`, `activity_logs`, `create_item`, `change_simple_column_value` |
+| **monday-code platform**                   | hosts the Fragrance API (Express service)                                                             |
+| **monday Storage** (`@mondaycom/apps-sdk`) | persists fragrances; in-memory fallback for local dev                                                 |
+| **monday CDN**                             | hosts the client-side bundle (via `mapps code:push --client-side`)                                    |
+| **monday tunnel** (`mapps tunnel:create`)  | dev-time HTTPS exposure for the Vite server                                                           |
+| **monday Vibe**                            | `Modal`, `ModalContent`, `Button`, `Heading`, `Text`, `Loader`, `AttentionBox`, plus form primitives  |
+| **monday no-code Automations**             | three custom automations on the live Production Orders board (new order, item updated, item deleted)  |
+| **monday OAuth scopes**                    | `boards:read`, `boards:write`, `me:read` (deployed installs)                                          |
+| **monday Item Card**                       | reused for native editing via `monday.execute("openItemCard")`                                        |
 
 ### Where the column IDs and status labels came from
 
@@ -442,7 +449,7 @@ If the customer wants to extend further, these are zero-code additions:
 - `When status changes to Done, set Order Complete Date to today` —
   drives any "Order Turnaround" formula column you choose to add.
 - `Every day at 9:00 AM, notify subscribers that orders in [Stuck]
-  need attention` — surfaces stalled work without manual triage.
+need attention` — surfaces stalled work without manual triage.
 
 ## Updating column IDs
 

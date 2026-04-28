@@ -13,7 +13,12 @@ const STATUS_COLORS = {
   Stuck: "#df2f4a",
 };
 
-export default function KanbanColumn({ status, orders, onAddClick, onOpenCard }) {
+export default function KanbanColumn({
+  status,
+  orders,
+  onAddClick,
+  onOpenCard,
+}) {
   const accent = STATUS_COLORS[status] || "#c4c4c4";
   const { setNodeRef, isOver } = useDroppable({
     id: `col-${status}`,

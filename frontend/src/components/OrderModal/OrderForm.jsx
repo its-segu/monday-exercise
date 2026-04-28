@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { Button, Divider, Flex, AttentionBox } from "@vibe/core";
+import { Button, Flex, AttentionBox } from "@vibe/core";
 import { defaultOrderValues, validateOrder } from "../../lib/validators";
 import { createOrderItem } from "../../api/boardQueries";
 import { FRAGRANCES_BY_ID, FRAGRANCES } from "../../data/fragrances";
@@ -51,7 +51,7 @@ export default function OrderForm({ boardId, onCancel, onCreated }) {
     event?.preventDefault?.();
     if (!boardId) {
       setSubmitError(
-        "Board context not loaded yet. Open this view from the Production Orders board."
+        "Board context not loaded yet. Open this view from the Production Orders board.",
       );
       return;
     }
@@ -72,7 +72,7 @@ export default function OrderForm({ boardId, onCancel, onCreated }) {
           { id: err.itemId },
           {
             warning: `Order created (#${err.itemId}) but ${err.failures.length} field(s) couldn't be saved. Open the item in Monday to edit.`,
-          }
+          },
         );
       } else {
         setSubmitError(err.message || "Could not create order");
@@ -89,18 +89,12 @@ export default function OrderForm({ boardId, onCancel, onCreated }) {
         errors={errors}
         onChange={handleChange}
       />
-      <Divider />
       <FragranceSection
         values={values}
         errors={errors}
         onChange={handleChange}
       />
-      <Divider />
-      <DetailsSection
-        values={values}
-        errors={errors}
-        onChange={handleChange}
-      />
+      <DetailsSection values={values} errors={errors} onChange={handleChange} />
 
       {submitError && (
         <div className={styles.submitError}>
@@ -112,12 +106,7 @@ export default function OrderForm({ boardId, onCancel, onCreated }) {
         </div>
       )}
 
-      <Flex
-        gap="small"
-        justify="end"
-        align="center"
-        className={styles.footer}
-      >
+      <Flex gap="small" justify="end" align="center" className={styles.footer}>
         <Button kind="tertiary" onClick={onCancel} disabled={submitting}>
           Cancel
         </Button>

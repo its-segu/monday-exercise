@@ -1,4 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   Modal,
   ModalContent,
@@ -10,10 +16,7 @@ import {
   AttentionBox,
 } from "@vibe/core";
 import { Retry } from "@vibe/icons";
-import {
-  getOrderItems,
-  getStatusChangeHistory,
-} from "../../api/boardQueries";
+import { getOrderItems, getStatusChangeHistory } from "../../api/boardQueries";
 import {
   decorateOrdersWithSla,
   summarizeSla,
@@ -63,7 +66,7 @@ export default function AnalyticsModal({ show, boardId, onClose }) {
             // eslint-disable-next-line no-console
             console.warn(
               "[AnalyticsModal] activity_logs unavailable:",
-              err?.message
+              err?.message,
             );
             return [];
           }),
@@ -82,7 +85,7 @@ export default function AnalyticsModal({ show, boardId, onClose }) {
         }
       }
     },
-    [boardId]
+    [boardId],
   );
 
   useEffect(() => {
@@ -94,13 +97,14 @@ export default function AnalyticsModal({ show, boardId, onClose }) {
   }, [show, boardId, fetchData]);
 
   const decorated = useMemo(
-    () => decorateOrdersWithSla(orders, history, { targetDays: SLA_TARGET_DAYS }),
-    [orders, history]
+    () =>
+      decorateOrdersWithSla(orders, history, { targetDays: SLA_TARGET_DAYS }),
+    [orders, history],
   );
 
   const summary = useMemo(
     () => summarizeSla(decorated, { targetDays: SLA_TARGET_DAYS }),
-    [decorated]
+    [decorated],
   );
 
   const atRiskList = useMemo(
@@ -109,7 +113,7 @@ export default function AnalyticsModal({ show, boardId, onClose }) {
         .filter((o) => o.atRisk)
         .sort((a, b) => (b.ageDays ?? 0) - (a.ageDays ?? 0))
         .slice(0, 6),
-    [decorated]
+    [decorated],
   );
 
   const hasHistory = history.length > 0;
@@ -179,8 +183,8 @@ export default function AnalyticsModal({ show, boardId, onClose }) {
                     summary.avgTurnaroundDays <= summary.targetDays
                       ? "good"
                       : summary.avgTurnaroundDays != null
-                      ? "warn"
-                      : "neutral"
+                        ? "warn"
+                        : "neutral"
                   }
                 />
                 <MetricCard
@@ -191,10 +195,10 @@ export default function AnalyticsModal({ show, boardId, onClose }) {
                     summary.onTimeRate == null
                       ? "neutral"
                       : summary.onTimeRate >= 0.9
-                      ? "good"
-                      : summary.onTimeRate >= 0.75
-                      ? "warn"
-                      : "bad"
+                        ? "good"
+                        : summary.onTimeRate >= 0.75
+                          ? "warn"
+                          : "bad"
                   }
                 />
                 <MetricCard
@@ -216,9 +220,7 @@ export default function AnalyticsModal({ show, boardId, onClose }) {
               </section>
 
               <section className={styles.section}>
-                <span className={styles.sectionLabel}>
-                  Pipeline snapshot
-                </span>
+                <span className={styles.sectionLabel}>Pipeline snapshot</span>
                 <PipelineBar byStatus={summary.byStatus} />
               </section>
 
@@ -237,7 +239,8 @@ export default function AnalyticsModal({ show, boardId, onClose }) {
                 </span>
                 {atRiskList.length === 0 ? (
                   <Text type="text2" color="secondary">
-                    Every in-flight order is within the {summary.targetDays}-day target. Nice.
+                    Every in-flight order is within the {summary.targetDays}-day
+                    target. Nice.
                   </Text>
                 ) : (
                   <ul className={styles.riskList}>
@@ -246,7 +249,8 @@ export default function AnalyticsModal({ show, boardId, onClose }) {
                         <span
                           className={styles.riskDot}
                           style={{
-                            background: STATUS_COLORS[order.statusLabel] || "#c4c4c4",
+                            background:
+                              STATUS_COLORS[order.statusLabel] || "#c4c4c4",
                           }}
                           aria-hidden
                         />
@@ -315,7 +319,11 @@ function PipelineBar({ byStatus }) {
 
   return (
     <div className={styles.pipeline}>
-      <div className={styles.pipelineBar} role="img" aria-label="Pipeline distribution">
+      <div
+        className={styles.pipelineBar}
+        role="img"
+        aria-label="Pipeline distribution"
+      >
         {ordered.map(({ label, count, color }) =>
           count === 0 ? null : (
             <span
@@ -327,7 +335,7 @@ function PipelineBar({ byStatus }) {
               }}
               title={`${label}: ${count}`}
             />
-          )
+          ),
         )}
       </div>
       <div className={styles.pipelineLegend}>
@@ -346,7 +354,11 @@ function PipelineBar({ byStatus }) {
 function ThroughputChart({ buckets }) {
   const max = Math.max(1, ...buckets.map((b) => b.count));
   return (
-    <div className={styles.chart} role="img" aria-label="Daily order completions">
+    <div
+      className={styles.chart}
+      role="img"
+      aria-label="Daily order completions"
+    >
       {buckets.map((bucket, idx) => {
         const heightPct = (bucket.count / max) * 100;
         return (

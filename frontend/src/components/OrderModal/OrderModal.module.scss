@@ -1,20 +1,49 @@
 .modalBody {
   display: flex;
   flex-direction: column;
-  gap: var(--space-large, 24px);
-  padding: var(--space-medium, 16px) 0;
+  gap: 28px;
+  padding: 8px 0 0;
 }
 
 .section {
   display: flex;
   flex-direction: column;
-  gap: var(--space-small, 8px);
+  gap: 14px;
 }
 
 .sectionHeader {
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  align-items: start;
+  column-gap: 12px;
+  row-gap: 2px;
+}
+
+.stepBadge {
+  grid-row: 1 / span 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: var(--primary-color, #0073ea);
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 13px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.sectionTitle {
+  grid-column: 2;
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  align-items: center;
+  min-height: 28px;
+}
+
+.sectionDescription {
+  grid-column: 2;
 }
 
 .fieldGrid {
@@ -52,13 +81,22 @@
   margin-top: 4px;
 }
 
+/* Footer pins to the bottom of the scrollable content so the primary
+   action is always visible while users scroll through customer/fragrance
+   sections. Solid background covers any rows that would otherwise show
+   through. */
 .footer {
+  position: sticky;
+  bottom: 0;
   display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: var(--space-small, 8px);
-  padding-top: var(--space-medium, 16px);
+  margin-top: 8px;
+  padding: 14px 0 8px;
+  background: var(--primary-background-color, #ffffff);
   border-top: 1px solid var(--ui-border-color);
+  z-index: 1;
 }
 
 .fallbackNotice {

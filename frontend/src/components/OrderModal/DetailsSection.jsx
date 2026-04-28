@@ -1,6 +1,10 @@
 import React from "react";
 import { Heading, Text, TextField, TextArea } from "@vibe/core";
-import { MAX_INSCRIPTION_LENGTH, MAX_QUANTITY, MIN_QUANTITY } from "../../lib/validators";
+import {
+  MAX_INSCRIPTION_LENGTH,
+  MAX_QUANTITY,
+  MIN_QUANTITY,
+} from "../../lib/validators";
 import styles from "./OrderModal.module.scss";
 
 function asValidation(message) {
@@ -11,10 +15,19 @@ export default function DetailsSection({ values, errors, onChange }) {
   return (
     <section className={styles.section}>
       <header className={styles.sectionHeader}>
-        <Heading type="h3" weight="bold">
-          Order details
-        </Heading>
-        <Text type="text2" color="secondary">
+        <span className={styles.stepBadge} aria-hidden="true">
+          3
+        </span>
+        <div className={styles.sectionTitle}>
+          <Heading type="h3" weight="bold">
+            Order details
+          </Heading>
+        </div>
+        <Text
+          type="text2"
+          color="secondary"
+          className={styles.sectionDescription}
+        >
           How many gift boxes, and any inscription on the lid?
         </Text>
       </header>

@@ -16,3 +16,21 @@ body,
 * {
   box-sizing: border-box;
 }
+
+/* Hide scrollbars everywhere inside any Vibe modal/dialog while keeping
+   scrolling functional. The default OS scrollbar appears mid-modal (just
+   below the sticky title region) which looks awkward; users still scroll
+   via wheel / trackpad / keyboard. Applies to OrderModal, OrderDetailsModal,
+   and AnalyticsModal in one rule. */
+[role="dialog"],
+[role="dialog"] * {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+[role="dialog"] ::-webkit-scrollbar,
+[role="dialog"]::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}

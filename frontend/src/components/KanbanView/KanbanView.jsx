@@ -1,5 +1,12 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Heading, Loader, AttentionBox, Button } from "@vibe/core";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { Heading, Loader, AttentionBox, Button, IconButton } from "@vibe/core";
+import { Dashboard } from "@vibe/icons";
 import {
   DndContext,
   DragOverlay,
@@ -10,10 +17,7 @@ import {
 } from "@dnd-kit/core";
 import monday from "../../lib/monday";
 import { getOrderItems, updateOrderStatus } from "../../api/boardQueries";
-import {
-  STATUS_LABELS,
-  STATUS_ORDER,
-} from "../../api/boardConstants";
+import { STATUS_LABELS, STATUS_ORDER } from "../../api/boardConstants";
 import KanbanColumn from "./KanbanColumn";
 import { OrderCardOverlay } from "./OrderCard";
 import OrderModal from "../OrderModal/OrderModal";
@@ -42,9 +46,17 @@ export default function KanbanView() {
   const [detailsOrderId, setDetailsOrderId] = useState(null);
   const reloadTimer = useRef(null);
 
+  // Press-and-hold to drag (mirrors monday's native kanban). With a
+  // distance-based activation, dnd-kit's PointerSensor was grabbing
+  // horizontal swipes over cards and stalling left/right scrolling. A
+  // 150ms hold-delay lets pan gestures pass through cleanly while still
+  // feeling instant for an intentional drag. Tolerance allows a few pixels
+  // of micro-movement during the press without cancelling.
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
-    useSensor(KeyboardSensor)
+    useSensor(PointerSensor, {
+      activationConstraint: { delay: 150, tolerance: 5 },
+    }),
+    useSensor(KeyboardSensor),
   );
 
   const loadOrders = useCallback(async (id) => {
@@ -65,7 +77,7 @@ export default function KanbanView() {
       if (reloadTimer.current) clearTimeout(reloadTimer.current);
       reloadTimer.current = setTimeout(() => loadOrders(id), 250);
     },
-    [loadOrders]
+    [loadOrders],
   );
 
   useEffect(() => {
@@ -101,7 +113,7 @@ export default function KanbanView() {
         } else {
           setLoading(false);
           setError(
-            "No board context. Open this view from inside the Production Orders board, or append ?boardId=18410280508 to the URL."
+            "No board context. Open this view from inside the Production Orders board, or append ?boardId=18410280508 to the URL.",
           );
         }
       }
@@ -138,7 +150,7 @@ export default function KanbanView() {
 
   const detailsOrder = useMemo(
     () => orders.find((o) => o.id === detailsOrderId) || null,
-    [orders, detailsOrderId]
+    [orders, detailsOrderId],
   );
 
   const handleCreated = useCallback(
@@ -159,7 +171,7 @@ export default function KanbanView() {
       setModalOpen(false);
       if (boardId) await loadOrders(boardId);
     },
-    [boardId, loadOrders]
+    [boardId, loadOrders],
   );
 
   const handleDragStart = useCallback(
@@ -168,7 +180,7 @@ export default function KanbanView() {
       const found = orders.find((o) => o.id === id);
       if (found) setActiveOrder(found);
     },
-    [orders]
+    [orders],
   );
 
   const handleDragCancel = useCallback(() => {
@@ -190,8 +202,8 @@ export default function KanbanView() {
 
       setOrders((prev) =>
         prev.map((o) =>
-          o.id === itemId ? { ...o, statusLabel: targetStatus } : o
-        )
+          o.id === itemId ? { ...o, statusLabel: targetStatus } : o,
+        ),
       );
 
       try {
@@ -204,8 +216,8 @@ export default function KanbanView() {
       } catch (err) {
         setOrders((prev) =>
           prev.map((o) =>
-            o.id === itemId ? { ...o, statusLabel: previousStatus } : o
-          )
+            o.id === itemId ? { ...o, statusLabel: previousStatus } : o,
+          ),
         );
         monday.execute("notice", {
           message: `Could not move order: ${err.message || "unknown error"}`,
@@ -214,7 +226,7 @@ export default function KanbanView() {
         });
       }
     },
-    [boardId, orders]
+    [boardId, orders],
   );
 
   if (loading && !orders.length) {
@@ -236,14 +248,16 @@ export default function KanbanView() {
           </Heading>
         </div>
         <div className={styles.headerActions}>
-          <Button
+          <IconButton
+            icon={Dashboard}
             size="medium"
             kind="secondary"
+            ariaLabel="Open analytics"
+            tooltipContent="Analytics"
             onClick={() => setAnalyticsOpen(true)}
             disabled={!boardId}
-          >
-            Analytics
-          </Button>
+            className={styles.analyticsButton}
+          />
           <Button
             size="medium"
             kind="primary"

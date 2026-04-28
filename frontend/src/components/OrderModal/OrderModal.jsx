@@ -15,11 +15,7 @@ export default function OrderModal({ show, boardId, onClose, onCreated }) {
       contentSpacing
     >
       <ModalContent>
-        <OrderForm
-          boardId={boardId}
-          onCancel={onClose}
-          onCreated={onCreated}
-        />
+        <OrderForm boardId={boardId} onCancel={onClose} onCreated={onCreated} />
       </ModalContent>
     </Modal>
   );

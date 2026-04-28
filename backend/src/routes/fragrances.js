@@ -18,7 +18,7 @@ router.get(
   asyncHandler(async (_req, res) => {
     const fragrances = await listFragrances();
     res.json(fragrances);
-  })
+  }),
 );
 
 router.get(
@@ -27,7 +27,7 @@ router.get(
     const fragrance = await getFragrance(req.params.id);
     if (!fragrance) return res.status(404).json({ error: "Not found" });
     res.json(fragrance);
-  })
+  }),
 );
 
 router.post(
@@ -35,7 +35,7 @@ router.post(
   asyncHandler(async (req, res) => {
     const fragrance = await createFragrance(req.body || {});
     res.status(201).json(fragrance);
-  })
+  }),
 );
 
 router.patch(
@@ -43,7 +43,7 @@ router.patch(
   asyncHandler(async (req, res) => {
     const fragrance = await updateFragrance(req.params.id, req.body || {});
     res.json(fragrance);
-  })
+  }),
 );
 
 router.delete(
@@ -52,7 +52,7 @@ router.delete(
     const ok = await deleteFragrance(req.params.id);
     if (!ok) return res.status(404).json({ error: "Not found" });
     res.status(204).send();
-  })
+  }),
 );
 
 export default router;

@@ -45,7 +45,7 @@ export default function FragranceSection({ values, errors, onChange }) {
         category: f.category,
         description: f.description,
       })),
-    [catalog]
+    [catalog],
   );
 
   const handlePick = (slotIndex) => (selection) => {
@@ -56,7 +56,7 @@ export default function FragranceSection({ values, errors, onChange }) {
 
   const optionsForSlot = (slotIndex) => {
     const taken = new Set(
-      (values.fragrances || []).filter((_, i) => i !== slotIndex)
+      (values.fragrances || []).filter((_, i) => i !== slotIndex),
     );
     return options.filter((opt) => !taken.has(opt.value));
   };
@@ -70,10 +70,19 @@ export default function FragranceSection({ values, errors, onChange }) {
   return (
     <section className={styles.section}>
       <header className={styles.sectionHeader}>
-        <Heading type="h3" weight="bold">
-          Fragrance selections
-        </Heading>
-        <Text type="text2" color="secondary">
+        <span className={styles.stepBadge} aria-hidden="true">
+          2
+        </span>
+        <div className={styles.sectionTitle}>
+          <Heading type="h3" weight="bold">
+            Fragrance selections
+          </Heading>
+        </div>
+        <Text
+          type="text2"
+          color="secondary"
+          className={styles.sectionDescription}
+        >
           Pick {REQUIRED_FRAGRANCE_COUNT} distinct fragrances for the gift box.
         </Text>
       </header>
