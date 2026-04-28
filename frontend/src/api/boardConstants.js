@@ -1,11 +1,3 @@
-/**
- * Column IDs and option values for the live "Production Orders" board
- * (id 18410280508). Pulled from a one-time `getBoardSchema()` call against the
- * actual asset, not assumed.
- *
- * If you install this app on a different account, re-run that query and update
- * the IDs/labels below — see README.md → "Updating column IDs".
- */
 export const COLUMN_IDS = {
   status: "status",
   fragrances: "dropdown",
@@ -18,10 +10,6 @@ export const COLUMN_IDS = {
   inscription: "text5",
 };
 
-/**
- * Status labels exactly as they appear on the board. These are the column
- * headers in the Kanban view.
- */
 export const STATUS_LABELS = {
   newOrder: "New Order",
   workingOnIt: "Working on it",
@@ -30,9 +18,6 @@ export const STATUS_LABELS = {
   stuck: "Stuck",
 };
 
-/**
- * Order in which Kanban columns are rendered, left-to-right.
- */
 export const STATUS_ORDER = [
   STATUS_LABELS.newOrder,
   STATUS_LABELS.workingOnIt,
@@ -41,9 +26,15 @@ export const STATUS_ORDER = [
   STATUS_LABELS.stuck,
 ];
 
-/**
- * Statuses that count as "production complete" for SLA purposes.
- * The production team's clock stops when an order reaches Ship (handed to
- * the carrier) — actual delivery time is out of their control.
- */
+export const STATUS_COLORS = {
+  [STATUS_LABELS.newOrder]: "#579bfc",
+  [STATUS_LABELS.workingOnIt]: "#fdab3d",
+  [STATUS_LABELS.ship]: "#a358df",
+  [STATUS_LABELS.done]: "#00c875",
+  [STATUS_LABELS.stuck]: "#df2f4a",
+};
+
+export const STATUS_COLOR_FALLBACK = "#c4c4c4";
+
+// Production team's clock stops at "Ship" — carrier transit is out of scope.
 export const COMPLETED_STATUSES = [STATUS_LABELS.ship, STATUS_LABELS.done];

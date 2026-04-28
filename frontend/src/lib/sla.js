@@ -2,15 +2,8 @@ import { COMPLETED_STATUSES } from "../api/boardConstants";
 
 const COMPLETED_SET = new Set(COMPLETED_STATUSES);
 
-/**
- * SLA target in days, measured from item creation to the first transition
- * into "Done" (in activity_logs). Centralized here so the modal, badges, and
- * any future logic agree on the same target.
- *
- * In a real install this would be customer-configurable (board setting,
- * settings JSON, etc.). For the take-home we hard-code a sensible default
- * and surface it in the UI so a reviewer can see exactly what's measured.
- */
+// Hard-coded for the take-home; in a real install this would come from a
+// board setting or app settings JSON.
 export const SLA_TARGET_DAYS = 3;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -22,35 +15,20 @@ const toMs = (raw) => {
   return Number.isFinite(parsed) ? parsed : null;
 };
 
-/**
- * Walk every status-change row and pick the *earliest* transition into a
- * production-complete status (Ship or Done) per item. The production team's
- * clock stops when the order is handed to shipping — carrier transit time
- * is out of their control, so we don't keep counting after Ship.
- *
- * Later flips back-and-forth (rework) don't reset the SLA clock, which is
- * the more forgiving and customer-friendly read.
- */
+// Earliest transition into a production-complete status (Ship or Done) per
+// item. Later flips back-and-forth (rework) don't reset the SLA clock.
 function buildCompletedAtIndex(statusHistory) {
-  const earliestCompletedAt = new Map();
+  const earliest = new Map();
   for (const row of statusHistory) {
     if (!COMPLETED_SET.has(row.toLabel)) continue;
-    const prev = earliestCompletedAt.get(row.itemId);
+    const prev = earliest.get(row.itemId);
     if (prev == null || row.createdAt < prev) {
-      earliestCompletedAt.set(row.itemId, row.createdAt);
+      earliest.set(row.itemId, row.createdAt);
     }
   }
-  return earliestCompletedAt;
+  return earliest;
 }
 
-/**
- * Decorate each order with computed SLA fields.
- *   completedAt        — ms epoch | null (still in flight)
- *   turnaroundDays     — number   | null (only when completedAt exists)
- *   ageDays            — number          (always; in-flight = age, completed = turnaround)
- *   onTime             — boolean | null  (true/false for completed; null in-flight)
- *   atRisk             — boolean         (in-flight whose age already exceeds target)
- */
 export function decorateOrdersWithSla(
   orders,
   statusHistory,
@@ -62,8 +40,7 @@ export function decorateOrdersWithSla(
   return (orders || []).map((order) => {
     const createdMs = toMs(order.createdAt);
     const completedMs = completedAtById.get(String(order.id)) ?? null;
-    const isCompleted = COMPLETED_SET.has(order.statusLabel);
-    const isInFlight = !isCompleted;
+    const isInFlight = !COMPLETED_SET.has(order.statusLabel);
 
     let turnaroundDays = null;
     if (createdMs != null && completedMs != null && completedMs >= createdMs) {
@@ -76,29 +53,17 @@ export function decorateOrdersWithSla(
       ageDays = Math.max(0, (endMs - createdMs) / DAY_MS);
     }
 
-    const onTime =
-      completedMs != null && turnaroundDays != null
-        ? turnaroundDays <= targetDays
-        : null;
-
-    const atRisk =
-      isInFlight && createdMs != null && now - createdMs > targetMs;
-
     return {
       ...order,
       completedAt: completedMs,
       turnaroundDays,
       ageDays,
-      onTime,
-      atRisk,
+      onTime: turnaroundDays != null ? turnaroundDays <= targetDays : null,
+      atRisk: isInFlight && createdMs != null && now - createdMs > targetMs,
     };
   });
 }
 
-/**
- * Roll up decorated orders into the metrics the dashboard cares about.
- * Pure function over the array — easy to unit-test if we ever add tests.
- */
 export function summarizeSla(
   decoratedOrders,
   { targetDays = SLA_TARGET_DAYS } = {},
@@ -110,7 +75,7 @@ export function summarizeSla(
   const turnarounds = completed
     .map((o) => o.turnaroundDays)
     .filter((n) => Number.isFinite(n));
-  const avgTurnaround =
+  const avgTurnaroundDays =
     turnarounds.length > 0
       ? turnarounds.reduce((s, n) => s + n, 0) / turnarounds.length
       : null;
@@ -118,17 +83,11 @@ export function summarizeSla(
   const onTime = completed.filter((o) => o.onTime === true).length;
   const onTimeRate = completed.length > 0 ? onTime / completed.length : null;
 
-  const atRisk = inFlight.filter((o) => o.atRisk).length;
-
-  // Status histogram for the pipeline-snapshot widget.
   const byStatus = decoratedOrders.reduce((acc, o) => {
     const key = o.statusLabel || "Unknown";
     acc[key] = (acc[key] || 0) + 1;
     return acc;
   }, {});
-
-  // Throughput: orders completed per calendar day for the last 14 days.
-  const throughput = buildThroughput(completed, 14);
 
   return {
     targetDays,
@@ -136,38 +95,33 @@ export function summarizeSla(
       total,
       completed: completed.length,
       inFlight: inFlight.length,
-      atRisk,
+      atRisk: inFlight.filter((o) => o.atRisk).length,
     },
-    avgTurnaroundDays: avgTurnaround,
+    avgTurnaroundDays,
     onTimeRate,
     byStatus,
-    throughput,
+    throughput: buildThroughput(completed, 14),
   };
 }
 
 function buildThroughput(completedOrders, days) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const buckets = [];
   const byDay = new Map();
   for (const order of completedOrders) {
     if (order.completedAt == null) continue;
     const d = new Date(order.completedAt);
     d.setHours(0, 0, 0, 0);
-    const key = d.getTime();
-    byDay.set(key, (byDay.get(key) || 0) + 1);
+    byDay.set(d.getTime(), (byDay.get(d.getTime()) || 0) + 1);
   }
+  const buckets = [];
   for (let i = days - 1; i >= 0; i -= 1) {
     const d = new Date(today.getTime() - i * DAY_MS);
-    const key = d.getTime();
-    buckets.push({ date: d, count: byDay.get(key) || 0 });
+    buckets.push({ date: d, count: byDay.get(d.getTime()) || 0 });
   }
   return buckets;
 }
 
-/**
- * Format helpers — small enough to live next to the math they format.
- */
 export function formatDays(value, { fractionDigits = 1 } = {}) {
   if (!Number.isFinite(value)) return "—";
   if (value < 1 / 24) return "< 1 hr";

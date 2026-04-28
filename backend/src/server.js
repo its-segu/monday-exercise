@@ -14,19 +14,17 @@ app.use("/health", healthRouter);
 app.use("/fragrances", fragrancesRouter);
 
 app.use((err, _req, res, _next) => {
-  // eslint-disable-next-line no-console
   console.error("[backend] unhandled error", err);
-  const status = err.statusCode || 500;
-  res.status(status).json({ error: err.message || "Internal server error" });
+  res
+    .status(err.statusCode || 500)
+    .json({ error: err.message || "Internal server error" });
 });
 
 const port = Number(process.env.PORT) || 8080;
 
 app.listen(port, () => {
-  // eslint-disable-next-line no-console
   console.log(`[backend] listening on :${port}`);
   runSeed().catch((err) => {
-    // eslint-disable-next-line no-console
     console.warn("[backend] seed skipped:", err?.message || err);
   });
 });

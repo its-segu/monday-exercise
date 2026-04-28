@@ -1,37 +1,25 @@
-import React from "react";
+import React, { memo } from "react";
 import { Heading, Text, IconButton } from "@vibe/core";
 import { Add } from "@vibe/icons";
 import { useDroppable } from "@dnd-kit/core";
 import OrderCard from "./OrderCard";
+import { STATUS_COLORS, STATUS_COLOR_FALLBACK } from "../../api/boardConstants";
 import styles from "./KanbanView.module.scss";
 
-const STATUS_COLORS = {
-  "New Order": "#579bfc",
-  "Working on it": "#fdab3d",
-  Ship: "#a358df",
-  Done: "#00c875",
-  Stuck: "#df2f4a",
-};
-
-export default function KanbanColumn({
-  status,
-  orders,
-  onAddClick,
-  onOpenCard,
-}) {
-  const accent = STATUS_COLORS[status] || "#c4c4c4";
+function KanbanColumn({ status, orders, onAddClick, onOpenCard }) {
+  const accent = STATUS_COLORS[status] || STATUS_COLOR_FALLBACK;
   const { setNodeRef, isOver } = useDroppable({
     id: `col-${status}`,
     data: { status },
   });
 
-  const columnClassName = `${styles.column}${isOver ? ` ${styles.columnOver}` : ""}`;
+  const className = `${styles.column}${isOver ? ` ${styles.columnOver}` : ""}`;
 
   return (
     <div className={styles.columnWrapper}>
       <section
         ref={setNodeRef}
-        className={columnClassName}
+        className={className}
         aria-label={`${status} column`}
         style={{ "--column-accent": accent }}
       >
@@ -74,3 +62,5 @@ export default function KanbanColumn({
     </div>
   );
 }
+
+export default memo(KanbanColumn);

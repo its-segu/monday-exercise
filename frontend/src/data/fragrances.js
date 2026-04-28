@@ -1,8 +1,5 @@
-// Stubbed fragrance catalog. This will be replaced by the fragrance API
-// (GET /fragrances) once the backend is wired up.
-//
-// Schema mirrors the spec from the take-home prompt:
-//   { id, name, description, category, image_url, created_at, updated_at }
+// Offline fallback used when the fragrance API is unreachable. The live data
+// served by `fragrancesApi.list()` is the source of truth.
 export const FRAGRANCES = [
   {
     id: "fr_amber-noir",

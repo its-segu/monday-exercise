@@ -1,31 +1,21 @@
 import { Storage } from "@mondaycom/apps-sdk";
 import { randomUUID } from "node:crypto";
 
-/**
- * Wraps Monday's monday-code Storage (a key/value store automatically scoped
- * to the current installer account + app) to give us a small CRUD layer for
- * fragrances.
- *
- * Storage layout:
- *   - "fragrance_index_v1"    -> { value: ["fr_amber-noir", ...] }
- *   - "fragrance:<id>"        -> { value: { id, name, description, ... } }
- */
-
+// Storage layout (monday-code Storage is a per-installer KV store):
+//   "fragrance_index_v1" → string[]   list of fragrance ids
+//   "fragrance:<id>"     → Fragrance  full record
 const INDEX_KEY = "fragrance_index_v1";
+const fragranceKey = (id) => `fragrance:${id}`;
 
 let storageSingleton = null;
 
-/**
- * Tiny in-memory adapter that mirrors the subset of the monday-code Storage
- * API we use. Only activated when MONDAY_TOKEN is missing (local dev).
- */
+// Local-dev fallback when MONDAY_TOKEN isn't set. Mirrors only the subset of
+// the Storage API we use.
 function createMemoryStorage() {
   const map = new Map();
-  // eslint-disable-next-line no-console
   console.warn(
     "[fragranceStore] MONDAY_TOKEN not set — using in-memory storage. " +
-      "Data will not persist across restarts. Set MONDAY_TOKEN in backend/.env " +
-      "to use real monday-code Storage.",
+      "Data will not persist across restarts.",
   );
   return {
     get: async (key) => ({ value: map.has(key) ? map.get(key) : null }),
@@ -39,30 +29,19 @@ function createMemoryStorage() {
 }
 
 function getStorage() {
-  if (!storageSingleton) {
-    const token = process.env.MONDAY_TOKEN;
-    if (!token) {
-      storageSingleton = createMemoryStorage();
-    } else {
-      storageSingleton = new Storage(token);
-    }
-  }
+  if (storageSingleton) return storageSingleton;
+  const token = process.env.MONDAY_TOKEN;
+  storageSingleton = token ? new Storage(token) : createMemoryStorage();
   return storageSingleton;
 }
 
 async function readIndex() {
-  const storage = getStorage();
-  const result = await storage.get(INDEX_KEY);
+  const result = await getStorage().get(INDEX_KEY);
   return Array.isArray(result?.value) ? result.value : [];
 }
 
 async function writeIndex(ids) {
-  const storage = getStorage();
-  await storage.set(INDEX_KEY, ids);
-}
-
-function fragranceKey(id) {
-  return `fragrance:${id}`;
+  await getStorage().set(INDEX_KEY, ids);
 }
 
 export async function listFragrances() {
@@ -83,35 +62,33 @@ export async function listFragrances() {
 }
 
 export async function getFragrance(id) {
-  const storage = getStorage();
-  const r = await storage.get(fragranceKey(id));
+  const r = await getStorage().get(fragranceKey(id));
   return r?.value || null;
 }
 
 export async function createFragrance(input) {
-  const storage = getStorage();
+  const name = String(input.name || "").trim();
+  if (!name) {
+    const err = new Error("name is required");
+    err.statusCode = 400;
+    throw err;
+  }
+
   const now = new Date().toISOString();
   const id = input.id || `fr_${randomUUID()}`;
   const fragrance = {
     id,
-    name: String(input.name || "").trim(),
+    name,
     description: input.description ? String(input.description) : "",
     category: input.category ? String(input.category) : "",
     image_url: input.image_url ? String(input.image_url) : "",
     created_at: now,
     updated_at: now,
   };
-  if (!fragrance.name) {
-    const err = new Error("name is required");
-    err.statusCode = 400;
-    throw err;
-  }
 
-  await storage.set(fragranceKey(id), fragrance);
+  await getStorage().set(fragranceKey(id), fragrance);
   const ids = await readIndex();
-  if (!ids.includes(id)) {
-    await writeIndex([...ids, id]);
-  }
+  if (!ids.includes(id)) await writeIndex([...ids, id]);
   return fragrance;
 }
 
@@ -122,7 +99,6 @@ export async function updateFragrance(id, patch) {
     err.statusCode = 404;
     throw err;
   }
-  const storage = getStorage();
   const next = {
     ...existing,
     ...patch,
@@ -130,7 +106,7 @@ export async function updateFragrance(id, patch) {
     created_at: existing.created_at,
     updated_at: new Date().toISOString(),
   };
-  await storage.set(fragranceKey(id), next);
+  await getStorage().set(fragranceKey(id), next);
   return next;
 }
 
@@ -150,18 +126,10 @@ export async function deleteFragrance(id) {
   return true;
 }
 
-/**
- * Seed runs on every boot and upserts every fragrance from the seed file:
- *   - New ids are inserted.
- *   - Existing ids get their fields refreshed (preserving original
- *     `created_at`, bumping `updated_at`).
- *
- * For this take-home there's no production data we need to protect, so a
- * full overwrite keeps the description/recipe text and image URLs in lockstep
- * with the source-controlled seed file. If a real customer started editing
- * records via the API, we'd switch to add-missing-only (or move the seed
- * behind an admin endpoint).
- */
+// Upserts every fragrance from the seed file on every boot:
+//   - new ids are inserted
+//   - existing ids are refreshed, preserving original `created_at`
+// Switch to add-missing-only if real customer data ever needs protection.
 export async function bulkSeedFragrances(fragrances) {
   const storage = getStorage();
   const existingIds = new Set(await readIndex());
@@ -184,7 +152,9 @@ export async function bulkSeedFragrances(fragrances) {
   await writeIndex(nextIndex);
 
   const added = nextIndex.filter((id) => !existingIds.has(id)).length;
-  const refreshed = nextIndex.length - added;
-
-  return { skipped: false, added, refreshed, count: nextIndex.length };
+  return {
+    added,
+    refreshed: nextIndex.length - added,
+    count: nextIndex.length,
+  };
 }

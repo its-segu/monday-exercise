@@ -1,4 +1,5 @@
 import React, {
+  memo,
   useCallback,
   useEffect,
   useMemo,
@@ -24,16 +25,15 @@ import {
   formatPercent,
   SLA_TARGET_DAYS,
 } from "../../lib/sla";
-import { STATUS_LABELS, STATUS_ORDER } from "../../api/boardConstants";
+import {
+  STATUS_ORDER,
+  STATUS_COLORS,
+  STATUS_COLOR_FALLBACK,
+} from "../../api/boardConstants";
 import styles from "./AnalyticsModal.module.scss";
 
-const STATUS_COLORS = {
-  [STATUS_LABELS.newOrder]: "#579bfc",
-  [STATUS_LABELS.workingOnIt]: "#fdab3d",
-  [STATUS_LABELS.ship]: "#a358df",
-  [STATUS_LABELS.done]: "#00c875",
-  [STATUS_LABELS.stuck]: "#df2f4a",
-};
+const HISTORY_DAYS = 90;
+const AT_RISK_LIMIT = 6;
 
 export default function AnalyticsModal({ show, boardId, onClose }) {
   const [loading, setLoading] = useState(false);
@@ -48,28 +48,25 @@ export default function AnalyticsModal({ show, boardId, onClose }) {
     async ({ silent = false } = {}) => {
       if (!boardId) return;
       cancelRef.current = false;
-      if (silent) {
-        setRefreshing(true);
-      } else {
-        setLoading(true);
-      }
+      if (silent) setRefreshing(true);
+      else setLoading(true);
       setError(null);
 
       try {
+        // activity_logs requires `boards:read` and a recent API version. If
+        // it fails we still render snapshot metrics from items_page so the
+        // modal degrades gracefully.
         const [orderItems, statusHistory] = await Promise.all([
           getOrderItems(boardId),
-          getStatusChangeHistory(boardId, { days: 90 }).catch((err) => {
-            // Activity logs require boards:read on the deployed app and a
-            // recent enough API version; if it fails, we still render the
-            // snapshot metrics from items_page so the modal degrades
-            // gracefully.
-            // eslint-disable-next-line no-console
-            console.warn(
-              "[AnalyticsModal] activity_logs unavailable:",
-              err?.message,
-            );
-            return [];
-          }),
+          getStatusChangeHistory(boardId, { days: HISTORY_DAYS }).catch(
+            (err) => {
+              console.warn(
+                "[AnalyticsModal] activity_logs unavailable:",
+                err?.message,
+              );
+              return [];
+            },
+          ),
         ]);
         if (cancelRef.current) return;
         setOrders(orderItems || []);
@@ -112,8 +109,13 @@ export default function AnalyticsModal({ show, boardId, onClose }) {
       decorated
         .filter((o) => o.atRisk)
         .sort((a, b) => (b.ageDays ?? 0) - (a.ageDays ?? 0))
-        .slice(0, 6),
+        .slice(0, AT_RISK_LIMIT),
     [decorated],
+  );
+
+  const handleRefresh = useCallback(
+    () => fetchData({ silent: true }),
+    [fetchData],
   );
 
   const hasHistory = history.length > 0;
@@ -124,7 +126,7 @@ export default function AnalyticsModal({ show, boardId, onClose }) {
       show={show}
       onClose={onClose}
       title="Production performance"
-      description={`Rolling 90-day window · SLA target ${SLA_TARGET_DAYS} days`}
+      description={`Rolling ${HISTORY_DAYS}-day window · SLA target ${SLA_TARGET_DAYS} days`}
       closeButtonAriaLabel="Close"
       width="720px"
       contentSpacing
@@ -143,7 +145,7 @@ export default function AnalyticsModal({ show, boardId, onClose }) {
               kind="tertiary"
               ariaLabel="Refresh analytics"
               tooltipContent="Refresh"
-              onClick={() => fetchData({ silent: true })}
+              onClick={handleRefresh}
               disabled={loading || refreshing || !boardId}
               className={refreshing ? styles.refreshing : undefined}
             />
@@ -178,28 +180,13 @@ export default function AnalyticsModal({ show, boardId, onClose }) {
                   label="Avg turnaround"
                   value={formatDays(summary.avgTurnaroundDays)}
                   hint={`${summary.totals.completed} completed`}
-                  tone={
-                    summary.avgTurnaroundDays != null &&
-                    summary.avgTurnaroundDays <= summary.targetDays
-                      ? "good"
-                      : summary.avgTurnaroundDays != null
-                        ? "warn"
-                        : "neutral"
-                  }
+                  tone={turnaroundTone(summary)}
                 />
                 <MetricCard
                   label="On-time rate"
                   value={formatPercent(summary.onTimeRate)}
                   hint={`Target ${summary.targetDays} d`}
-                  tone={
-                    summary.onTimeRate == null
-                      ? "neutral"
-                      : summary.onTimeRate >= 0.9
-                        ? "good"
-                        : summary.onTimeRate >= 0.75
-                          ? "warn"
-                          : "bad"
-                  }
+                  tone={onTimeTone(summary.onTimeRate)}
                 />
                 <MetricCard
                   label="In flight"
@@ -214,7 +201,7 @@ export default function AnalyticsModal({ show, boardId, onClose }) {
                 <MetricCard
                   label="Total orders"
                   value={String(summary.totals.total)}
-                  hint="last 90 days"
+                  hint={`last ${HISTORY_DAYS} days`}
                   tone="neutral"
                 />
               </section>
@@ -250,7 +237,8 @@ export default function AnalyticsModal({ show, boardId, onClose }) {
                           className={styles.riskDot}
                           style={{
                             background:
-                              STATUS_COLORS[order.statusLabel] || "#c4c4c4",
+                              STATUS_COLORS[order.statusLabel] ||
+                              STATUS_COLOR_FALLBACK,
                           }}
                           aria-hidden
                         />
@@ -282,6 +270,19 @@ export default function AnalyticsModal({ show, boardId, onClose }) {
   );
 }
 
+function turnaroundTone(summary) {
+  const v = summary.avgTurnaroundDays;
+  if (v == null) return "neutral";
+  return v <= summary.targetDays ? "good" : "warn";
+}
+
+function onTimeTone(rate) {
+  if (rate == null) return "neutral";
+  if (rate >= 0.9) return "good";
+  if (rate >= 0.75) return "warn";
+  return "bad";
+}
+
 function formatRelativeTime(ms) {
   if (!ms) return "";
   const diff = Date.now() - ms;
@@ -291,7 +292,12 @@ function formatRelativeTime(ms) {
   return new Date(ms).toLocaleTimeString();
 }
 
-function MetricCard({ label, value, hint, tone = "neutral" }) {
+const MetricCard = memo(function MetricCard({
+  label,
+  value,
+  hint,
+  tone = "neutral",
+}) {
   return (
     <div className={`${styles.metricCard} ${styles[`tone-${tone}`]}`}>
       <span className={styles.metricLabel}>{label}</span>
@@ -299,13 +305,13 @@ function MetricCard({ label, value, hint, tone = "neutral" }) {
       {hint && <span className={styles.metricHint}>{hint}</span>}
     </div>
   );
-}
+});
 
-function PipelineBar({ byStatus }) {
+const PipelineBar = memo(function PipelineBar({ byStatus }) {
   const ordered = STATUS_ORDER.map((label) => ({
     label,
     count: byStatus[label] || 0,
-    color: STATUS_COLORS[label] || "#c4c4c4",
+    color: STATUS_COLORS[label] || STATUS_COLOR_FALLBACK,
   }));
   const total = ordered.reduce((s, b) => s + b.count, 0);
 
@@ -329,10 +335,7 @@ function PipelineBar({ byStatus }) {
             <span
               key={label}
               className={styles.pipelineSegment}
-              style={{
-                flex: count,
-                background: color,
-              }}
+              style={{ flex: count, background: color }}
               title={`${label}: ${count}`}
             />
           ),
@@ -349,39 +352,37 @@ function PipelineBar({ byStatus }) {
       </div>
     </div>
   );
-}
+});
 
-function ThroughputChart({ buckets }) {
+const ThroughputChart = memo(function ThroughputChart({ buckets }) {
   const max = Math.max(1, ...buckets.map((b) => b.count));
+  const lastIdx = buckets.length - 1;
   return (
     <div
       className={styles.chart}
       role="img"
       aria-label="Daily order completions"
     >
-      {buckets.map((bucket, idx) => {
-        const heightPct = (bucket.count / max) * 100;
-        return (
+      {buckets.map((bucket, idx) => (
+        <span
+          key={idx}
+          className={styles.chartCol}
+          title={`${bucket.date.toLocaleDateString()}: ${bucket.count} shipped`}
+        >
           <span
-            key={idx}
-            className={styles.chartCol}
-            title={`${bucket.date.toLocaleDateString()}: ${bucket.count} shipped`}
-          >
-            <span
-              className={styles.chartBar}
-              style={{ height: `${Math.max(2, heightPct)}%` }}
-            />
-            {(idx === 0 || idx === buckets.length - 1) && (
-              <span className={styles.chartTick}>
-                {bucket.date.toLocaleDateString(undefined, {
-                  month: "short",
-                  day: "numeric",
-                })}
-              </span>
-            )}
-          </span>
-        );
-      })}
+            className={styles.chartBar}
+            style={{ height: `${Math.max(2, (bucket.count / max) * 100)}%` }}
+          />
+          {(idx === 0 || idx === lastIdx) && (
+            <span className={styles.chartTick}>
+              {bucket.date.toLocaleDateString(undefined, {
+                month: "short",
+                day: "numeric",
+              })}
+            </span>
+          )}
+        </span>
+      ))}
     </div>
   );
-}
+});

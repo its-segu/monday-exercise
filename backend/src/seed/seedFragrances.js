@@ -1,12 +1,8 @@
 import { bulkSeedFragrances } from "../services/fragranceStore.js";
 
-/**
- * Each fragrance description is written as a producer-facing recipe so the
- * artisan reading it has explicit notes to follow when blending. The schema
- * (per the take-home spec) doesn't include a separate `ingredients` field —
- * the prompt mandates id, name, description, category, image_url, and
- * timestamps, so we lean into `description` as the recipe.
- */
+// Descriptions follow a `Top: ... Heart: ... Base: ...` recipe convention so
+// the frontend can parse them into structured tier sections. The take-home
+// schema only mandates `description`, so we lean into it as the recipe.
 const STARTER_FRAGRANCES = [
   {
     id: "fr_amber-noir",
@@ -108,10 +104,9 @@ const STARTER_FRAGRANCES = [
     image_url:
       "https://images.unsplash.com/photo-1543589077-47d81606c1bf?w=400",
   },
-  // ---- Category-named labels that exist on the live board ----
-  // The starter board has dropdown labels typed in by hand ("Citrus",
-  // "Floral", etc. — names that double as categories). Those labels need
-  // matching API entries so the producer's recipe is always available.
+  // The live board uses category-style labels ("Citrus", "Floral", etc.)
+  // typed by hand. Each needs a matching API entry so the producer recipe
+  // resolves regardless of which label the order picker uses.
   {
     id: "fr_citrus",
     name: "Citrus",
@@ -168,17 +163,11 @@ const STARTER_FRAGRANCES = [
   },
 ];
 
-/**
- * Idempotent: only seeds when the fragrance index is empty. Safe to call on
- * every boot.
- */
 export async function runSeed() {
-  const result = await bulkSeedFragrances(STARTER_FRAGRANCES);
-  // eslint-disable-next-line no-console
-  if (result.skipped) {
-    console.log(`[seed] fragrance catalog already populated (${result.count})`);
-  } else {
-    console.log(`[seed] seeded ${result.count} starter fragrances`);
-  }
-  return result;
+  const { added, refreshed, count } =
+    await bulkSeedFragrances(STARTER_FRAGRANCES);
+  console.log(
+    `[seed] catalog upserted: ${count} total (${added} added, ${refreshed} refreshed)`,
+  );
+  return { added, refreshed, count };
 }

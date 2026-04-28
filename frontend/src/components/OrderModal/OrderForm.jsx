@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { Button, Flex, AttentionBox } from "@vibe/core";
 import { defaultOrderValues, validateOrder } from "../../lib/validators";
 import { createOrderItem } from "../../api/boardQueries";
@@ -9,23 +9,20 @@ import FragranceSection from "./FragranceSection";
 import DetailsSection from "./DetailsSection";
 import styles from "./OrderModal.module.scss";
 
-async function resolveFragranceNames(ids) {
-  const out = [];
-  for (const id of ids) {
-    if (!id) continue;
-    if (FRAGRANCES_BY_ID[id]) {
-      out.push(FRAGRANCES_BY_ID[id].name);
-      continue;
-    }
-    try {
-      const f = await fragrancesApi.get(id);
-      if (f?.name) out.push(f.name);
-    } catch {
-      const local = FRAGRANCES.find((f) => f.id === id);
-      if (local) out.push(local.name);
-    }
+async function resolveFragranceName(id) {
+  if (!id) return null;
+  if (FRAGRANCES_BY_ID[id]) return FRAGRANCES_BY_ID[id].name;
+  try {
+    const f = await fragrancesApi.get(id);
+    return f?.name || null;
+  } catch {
+    return FRAGRANCES.find((f) => f.id === id)?.name || null;
   }
-  return out;
+}
+
+async function resolveFragranceNames(ids) {
+  const names = await Promise.all(ids.map(resolveFragranceName));
+  return names.filter(Boolean);
 }
 
 export default function OrderForm({ boardId, onCancel, onCreated }) {
@@ -34,16 +31,15 @@ export default function OrderForm({ boardId, onCancel, onCreated }) {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
 
-  const handleChange = (key, value) => {
+  const handleChange = useCallback((key, value) => {
     setValues((prev) => ({ ...prev, [key]: value }));
-    if (errors[key]) {
-      setErrors((prev) => {
-        const next = { ...prev };
-        delete next[key];
-        return next;
-      });
-    }
-  };
+    setErrors((prev) => {
+      if (!prev[key]) return prev;
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  }, []);
 
   const validation = useMemo(() => validateOrder(values), [values]);
 

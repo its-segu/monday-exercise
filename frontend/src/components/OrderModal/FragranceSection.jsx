@@ -48,23 +48,30 @@ export default function FragranceSection({ values, errors, onChange }) {
     [catalog],
   );
 
+  const optionsById = useMemo(
+    () => new Map(options.map((o) => [o.value, o])),
+    [options],
+  );
+
+  // Pre-compute per-slot option lists so each Dropdown's `options` prop is
+  // referentially stable across renders.
+  const perSlotOptions = useMemo(() => {
+    const picks = values.fragrances || [];
+    return Array.from({ length: REQUIRED_FRAGRANCE_COUNT }, (_, slotIdx) => {
+      const taken = new Set(picks.filter((_, i) => i !== slotIdx));
+      return options.filter((opt) => !taken.has(opt.value));
+    });
+  }, [options, values.fragrances]);
+
   const handlePick = (slotIndex) => (selection) => {
     const next = [...(values.fragrances || ["", "", ""])];
     next[slotIndex] = selection ? selection.value : "";
     onChange("fragrances", next);
   };
 
-  const optionsForSlot = (slotIndex) => {
-    const taken = new Set(
-      (values.fragrances || []).filter((_, i) => i !== slotIndex),
-    );
-    return options.filter((opt) => !taken.has(opt.value));
-  };
-
   const valueForSlot = (slotIndex) => {
     const id = values.fragrances?.[slotIndex];
-    if (!id) return null;
-    return options.find((o) => o.value === id) || null;
+    return id ? optionsById.get(id) || null : null;
   };
 
   return (
@@ -98,7 +105,7 @@ export default function FragranceSection({ values, errors, onChange }) {
               <span className={styles.fragranceLabel}>Candle {idx + 1}</span>
               <Dropdown
                 placeholder="Choose a fragrance"
-                options={optionsForSlot(idx)}
+                options={perSlotOptions[idx]}
                 value={valueForSlot(idx)}
                 onChange={handlePick(idx)}
                 clearable

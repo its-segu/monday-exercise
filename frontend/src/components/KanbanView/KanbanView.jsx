@@ -25,14 +25,23 @@ import OrderDetailsModal from "../OrderDetailsModal/OrderDetailsModal";
 import AnalyticsModal from "../AnalyticsModal/AnalyticsModal";
 import styles from "./KanbanView.module.scss";
 
+const RELOAD_DEBOUNCE_MS = 250;
+const CONTEXT_FALLBACK_MS = 1500;
+
+const REFRESH_EVENTS = new Set([
+  "new_items",
+  "change_column_values",
+  "change_specific_column_value",
+  "change_status_column_value",
+  "delete_items",
+]);
+
 function getFallbackBoardId() {
   if (typeof window === "undefined") return null;
-  const params = new URLSearchParams(window.location.search);
-  const fromQuery = params.get("boardId");
+  const fromQuery = new URLSearchParams(window.location.search).get("boardId");
   if (fromQuery) return fromQuery;
   const fromEnv = import.meta.env?.VITE_DEV_BOARD_ID;
-  if (fromEnv) return String(fromEnv);
-  return null;
+  return fromEnv ? String(fromEnv) : null;
 }
 
 export default function KanbanView() {
@@ -46,12 +55,9 @@ export default function KanbanView() {
   const [detailsOrderId, setDetailsOrderId] = useState(null);
   const reloadTimer = useRef(null);
 
-  // Press-and-hold to drag (mirrors monday's native kanban). With a
-  // distance-based activation, dnd-kit's PointerSensor was grabbing
-  // horizontal swipes over cards and stalling left/right scrolling. A
-  // 150ms hold-delay lets pan gestures pass through cleanly while still
-  // feeling instant for an intentional drag. Tolerance allows a few pixels
-  // of micro-movement during the press without cancelling.
+  // Press-and-hold lets horizontal pan gestures pass through cards cleanly
+  // (matches monday's native kanban). A pure distance constraint hijacks
+  // left/right scrolls.
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: { delay: 150, tolerance: 5 },
@@ -75,7 +81,10 @@ export default function KanbanView() {
   const scheduleReload = useCallback(
     (id) => {
       if (reloadTimer.current) clearTimeout(reloadTimer.current);
-      reloadTimer.current = setTimeout(() => loadOrders(id), 250);
+      reloadTimer.current = setTimeout(
+        () => loadOrders(id),
+        RELOAD_DEBOUNCE_MS,
+      );
     },
     [loadOrders],
   );
@@ -93,15 +102,8 @@ export default function KanbanView() {
     });
 
     const unsubEvents = monday.listen("events", (res) => {
-      const type = res?.data?.type;
-      if (
-        type === "new_items" ||
-        type === "change_column_values" ||
-        type === "change_specific_column_value" ||
-        type === "change_status_column_value" ||
-        type === "delete_items"
-      ) {
-        if (boardId) scheduleReload(boardId);
+      if (REFRESH_EVENTS.has(res?.data?.type) && boardId) {
+        scheduleReload(boardId);
       }
     });
 
@@ -117,7 +119,7 @@ export default function KanbanView() {
           );
         }
       }
-    }, 1500);
+    }, CONTEXT_FALLBACK_MS);
 
     return () => {
       clearTimeout(fallbackTimer);
@@ -155,19 +157,11 @@ export default function KanbanView() {
 
   const handleCreated = useCallback(
     async (newItem, meta) => {
-      if (meta?.warning) {
-        monday.execute("notice", {
-          message: meta.warning,
-          type: "warning",
-          timeout: 5000,
-        });
-      } else {
-        monday.execute("notice", {
-          message: `Order #${newItem?.id || ""} created`,
-          type: "success",
-          timeout: 3500,
-        });
-      }
+      monday.execute("notice", {
+        message: meta?.warning || `Order #${newItem?.id || ""} created`,
+        type: meta?.warning ? "warning" : "success",
+        timeout: meta?.warning ? 5000 : 3500,
+      });
       setModalOpen(false);
       if (boardId) await loadOrders(boardId);
     },
@@ -176,8 +170,7 @@ export default function KanbanView() {
 
   const handleDragStart = useCallback(
     (event) => {
-      const id = event?.active?.id;
-      const found = orders.find((o) => o.id === id);
+      const found = orders.find((o) => o.id === event?.active?.id);
       if (found) setActiveOrder(found);
     },
     [orders],
@@ -200,6 +193,7 @@ export default function KanbanView() {
 
       const previousStatus = current.statusLabel;
 
+      // Optimistic update — revert below if the API write fails.
       setOrders((prev) =>
         prev.map((o) =>
           o.id === itemId ? { ...o, statusLabel: targetStatus } : o,
@@ -229,6 +223,12 @@ export default function KanbanView() {
     [boardId, orders],
   );
 
+  const handleOpenNewOrder = useCallback(() => setModalOpen(true), []);
+  const handleCloseNewOrder = useCallback(() => setModalOpen(false), []);
+  const handleOpenAnalytics = useCallback(() => setAnalyticsOpen(true), []);
+  const handleCloseAnalytics = useCallback(() => setAnalyticsOpen(false), []);
+  const handleCloseDetails = useCallback(() => setDetailsOrderId(null), []);
+
   if (loading && !orders.length) {
     return (
       <div className={styles.kanbanRoot}>
@@ -254,14 +254,14 @@ export default function KanbanView() {
             kind="secondary"
             ariaLabel="Open analytics"
             tooltipContent="Analytics"
-            onClick={() => setAnalyticsOpen(true)}
+            onClick={handleOpenAnalytics}
             disabled={!boardId}
             className={styles.analyticsButton}
           />
           <Button
             size="medium"
             kind="primary"
-            onClick={() => setModalOpen(true)}
+            onClick={handleOpenNewOrder}
             disabled={!boardId}
           >
             + New order
@@ -293,7 +293,7 @@ export default function KanbanView() {
               orders={grouped[status] || []}
               onAddClick={
                 status === STATUS_LABELS.newOrder
-                  ? () => setModalOpen(true)
+                  ? handleOpenNewOrder
                   : undefined
               }
               onOpenCard={handleOpenCard}
@@ -308,20 +308,20 @@ export default function KanbanView() {
       <OrderModal
         show={modalOpen}
         boardId={boardId}
-        onClose={() => setModalOpen(false)}
+        onClose={handleCloseNewOrder}
         onCreated={handleCreated}
       />
 
       <OrderDetailsModal
         show={Boolean(detailsOrderId)}
         order={detailsOrder}
-        onClose={() => setDetailsOrderId(null)}
+        onClose={handleCloseDetails}
       />
 
       <AnalyticsModal
         show={analyticsOpen}
         boardId={boardId}
-        onClose={() => setAnalyticsOpen(false)}
+        onClose={handleCloseAnalytics}
       />
     </div>
   );
