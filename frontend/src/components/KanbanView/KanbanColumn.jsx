@@ -58,6 +58,7 @@ function KanbanColumn({
           className={styles.columnHeader}
           {...attributes}
           {...listeners}
+          style={{ touchAction: "pan-x pan-y" }}
         >
           <span className={styles.columnGrip} aria-hidden>
             <Drag />

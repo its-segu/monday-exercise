@@ -60,6 +60,7 @@ $border: var(--ui-border-color, #d0d4e4);
   max-width: 260px;
   display: flex;
   min-height: 0;
+  touch-action: pan-x pan-y !important;
 }
 
 .column {
@@ -95,7 +96,7 @@ $border: var(--ui-border-color, #d0d4e4);
   flex-shrink: 0;
   cursor: grab;
   user-select: none;
-  touch-action: none;
+  touch-action: pan-x pan-y;
 
   &:active {
     cursor: grabbing;
