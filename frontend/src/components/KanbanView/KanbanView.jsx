@@ -1,10 +1,4 @@
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Heading, Loader, AttentionBox, Button, IconButton } from "@vibe/core";
 import { Dashboard } from "@vibe/icons";
 import {
@@ -20,9 +14,8 @@ import {
   arrayMove,
   horizontalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import monday from "../../lib/monday";
-import { getOrderItems, updateOrderStatus } from "../../api/boardQueries";
 import { STATUS_LABELS, STATUS_ORDER } from "../../api/boardConstants";
+import useKanbanBoard from "./useKanbanBoard";
 import KanbanColumn from "./KanbanColumn";
 import { OrderCardOverlay } from "./OrderCard";
 import OrderModal from "../OrderModal/OrderModal";
@@ -30,25 +23,7 @@ import OrderDetailsModal from "../OrderDetailsModal/OrderDetailsModal";
 import AnalyticsModal from "../AnalyticsModal/AnalyticsModal";
 import styles from "./KanbanView.module.scss";
 
-const RELOAD_DEBOUNCE_MS = 250;
-const CONTEXT_FALLBACK_MS = 1500;
 const COLUMN_ORDER_KEY = "monday-candle:columnOrder";
-
-const REFRESH_EVENTS = new Set([
-  "new_items",
-  "change_column_values",
-  "change_specific_column_value",
-  "change_status_column_value",
-  "delete_items",
-]);
-
-function getFallbackBoardId() {
-  if (typeof window === "undefined") return null;
-  const fromQuery = new URLSearchParams(window.location.search).get("boardId");
-  if (fromQuery) return fromQuery;
-  const fromEnv = import.meta.env?.VITE_DEV_BOARD_ID;
-  return fromEnv ? String(fromEnv) : null;
-}
 
 function loadColumnOrder() {
   if (typeof window === "undefined") return STATUS_ORDER;
@@ -70,16 +45,21 @@ function loadColumnOrder() {
 }
 
 export default function KanbanView() {
-  const [boardId, setBoardId] = useState(null);
-  const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const {
+    boardId,
+    orders,
+    loading,
+    error,
+    grouped,
+    moveCardStatus,
+    handleCreated,
+  } = useKanbanBoard();
+
   const [modalOpen, setModalOpen] = useState(false);
   const [analyticsOpen, setAnalyticsOpen] = useState(false);
-  const [activeItem, setActiveItem] = useState(null); // { type, order } | { type, status }
+  const [activeItem, setActiveItem] = useState(null);
   const [detailsOrderId, setDetailsOrderId] = useState(null);
   const [columnOrder, setColumnOrder] = useState(loadColumnOrder);
-  const reloadTimer = useRef(null);
   const kanbanBodyRef = useRef(null);
 
   useEffect(() => {
@@ -95,9 +75,7 @@ export default function KanbanView() {
   }, [columnOrder]);
 
   // Translate vertical wheel into horizontal kanban scroll when the cursor
-  // isn't over a column that can absorb the scroll itself (matches monday's
-  // native kanban feel). Native horizontal wheel (shift+wheel, trackpad
-  // gestures) is left untouched.
+  // isn't over a column that can absorb the scroll itself.
   useEffect(() => {
     const el = kanbanBodyRef.current;
     if (!el) return undefined;
@@ -126,9 +104,6 @@ export default function KanbanView() {
     return () => el.removeEventListener("wheel", onWheel);
   }, []);
 
-  // Press-and-hold lets horizontal pan gestures pass through cards cleanly
-  // (matches monday's native kanban). A pure distance constraint hijacks
-  // left/right scrolls.
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: { delay: 150, tolerance: 5 },
@@ -136,108 +111,7 @@ export default function KanbanView() {
     useSensor(KeyboardSensor),
   );
 
-  const loadOrders = useCallback(async (id) => {
-    if (!id) return;
-    try {
-      const items = await getOrderItems(id);
-      setOrders(items);
-      setError(null);
-    } catch (err) {
-      setError(err.message || "Could not load orders");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  const scheduleReload = useCallback(
-    (id) => {
-      if (reloadTimer.current) clearTimeout(reloadTimer.current);
-      reloadTimer.current = setTimeout(
-        () => loadOrders(id),
-        RELOAD_DEBOUNCE_MS,
-      );
-    },
-    [loadOrders],
-  );
-
-  useEffect(() => {
-    monday.execute("valueCreatedForUser");
-
-    let gotContext = false;
-    const unsubContext = monday.listen("context", (res) => {
-      const incomingBoardId = res?.data?.boardId;
-      if (incomingBoardId) {
-        gotContext = true;
-        setBoardId(String(incomingBoardId));
-      }
-    });
-
-    const unsubEvents = monday.listen("events", (res) => {
-      if (REFRESH_EVENTS.has(res?.data?.type) && boardId) {
-        scheduleReload(boardId);
-      }
-    });
-
-    const fallbackTimer = setTimeout(() => {
-      if (!gotContext && !boardId) {
-        const fallback = getFallbackBoardId();
-        if (fallback) {
-          setBoardId(fallback);
-        } else {
-          setLoading(false);
-          setError(
-            "No board context. Open this view from inside the Production Orders board, or append ?boardId=18410280508 to the URL.",
-          );
-        }
-      }
-    }, CONTEXT_FALLBACK_MS);
-
-    return () => {
-      clearTimeout(fallbackTimer);
-      if (typeof unsubContext === "function") unsubContext();
-      if (typeof unsubEvents === "function") unsubEvents();
-      if (reloadTimer.current) clearTimeout(reloadTimer.current);
-    };
-  }, [boardId, scheduleReload]);
-
-  useEffect(() => {
-    if (!boardId) return;
-    setLoading(true);
-    loadOrders(boardId);
-  }, [boardId, loadOrders]);
-
-  const grouped = useMemo(() => {
-    const buckets = Object.fromEntries(STATUS_ORDER.map((s) => [s, []]));
-    for (const order of orders) {
-      const key = STATUS_ORDER.includes(order.statusLabel)
-        ? order.statusLabel
-        : STATUS_LABELS.newOrder;
-      buckets[key].push(order);
-    }
-    return buckets;
-  }, [orders]);
-
-  const handleOpenCard = useCallback((itemId) => {
-    setDetailsOrderId(itemId);
-  }, []);
-
-  const detailsOrder = useMemo(
-    () => orders.find((o) => o.id === detailsOrderId) || null,
-    [orders, detailsOrderId],
-  );
-
-  const handleCreated = useCallback(
-    async (newItem, meta) => {
-      monday.execute("notice", {
-        message: meta?.warning || `Order #${newItem?.id || ""} created`,
-        type: meta?.warning ? "warning" : "success",
-        timeout: meta?.warning ? 5000 : 3500,
-      });
-      setModalOpen(false);
-      if (boardId) await loadOrders(boardId);
-    },
-    [boardId, loadOrders],
-  );
+  const detailsOrder = orders.find((o) => o.id === detailsOrderId) || null;
 
   const handleDragStart = useCallback(
     (event) => {
@@ -252,45 +126,7 @@ export default function KanbanView() {
     [orders],
   );
 
-  const handleDragCancel = useCallback(() => {
-    setActiveItem(null);
-  }, []);
-
-  const moveCardStatus = useCallback(
-    async (itemId, targetStatus) => {
-      const current = orders.find((o) => o.id === itemId);
-      if (!current || current.statusLabel === targetStatus) return;
-      const previousStatus = current.statusLabel;
-
-      // Optimistic update — revert below if the API write fails.
-      setOrders((prev) =>
-        prev.map((o) =>
-          o.id === itemId ? { ...o, statusLabel: targetStatus } : o,
-        ),
-      );
-
-      try {
-        await updateOrderStatus(boardId, itemId, targetStatus);
-        monday.execute("notice", {
-          message: `Moved #${itemId} to "${targetStatus}"`,
-          type: "success",
-          timeout: 2500,
-        });
-      } catch (err) {
-        setOrders((prev) =>
-          prev.map((o) =>
-            o.id === itemId ? { ...o, statusLabel: previousStatus } : o,
-          ),
-        );
-        monday.execute("notice", {
-          message: `Could not move order: ${err.message || "unknown error"}`,
-          type: "error",
-          timeout: 4000,
-        });
-      }
-    },
-    [boardId, orders],
-  );
+  const handleDragCancel = useCallback(() => setActiveItem(null), []);
 
   const handleDragEnd = useCallback(
     (event) => {
@@ -298,9 +134,7 @@ export default function KanbanView() {
       const { active, over } = event;
       if (!over) return;
 
-      const activeType = active.data?.current?.type;
-
-      if (activeType === "column") {
+      if (active.data?.current?.type === "column") {
         if (active.id !== over.id) {
           setColumnOrder((prev) => {
             const oldIdx = prev.indexOf(active.id);
@@ -312,8 +146,6 @@ export default function KanbanView() {
         return;
       }
 
-      // Card drag — `over` is either a column sortable id (the status string)
-      // or, defensively, a status carried on the droppable's data payload.
       const itemId = active.id;
       const targetStatus = over.data?.current?.status || over.id;
       if (!itemId || !targetStatus || !boardId) return;
@@ -327,7 +159,16 @@ export default function KanbanView() {
   const handleCloseNewOrder = useCallback(() => setModalOpen(false), []);
   const handleOpenAnalytics = useCallback(() => setAnalyticsOpen(true), []);
   const handleCloseAnalytics = useCallback(() => setAnalyticsOpen(false), []);
+  const handleOpenCard = useCallback((id) => setDetailsOrderId(id), []);
   const handleCloseDetails = useCallback(() => setDetailsOrderId(null), []);
+
+  const onCreated = useCallback(
+    async (newItem, meta) => {
+      await handleCreated(newItem, meta);
+      setModalOpen(false);
+    },
+    [handleCreated],
+  );
 
   if (loading && !orders.length) {
     return (
@@ -419,7 +260,7 @@ export default function KanbanView() {
         show={modalOpen}
         boardId={boardId}
         onClose={handleCloseNewOrder}
-        onCreated={handleCreated}
+        onCreated={onCreated}
       />
 
       <OrderDetailsModal

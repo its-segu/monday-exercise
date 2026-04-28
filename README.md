@@ -101,8 +101,9 @@ the platform inventory at a glance.
 
 - `monday.api()` GraphQL — `boards.items_page` paginated query for orders
 - Schema-version-agnostic: pulls `column_values { id, type, text, value }`
-  and parses raw JSON in `boardQueries.normalizeItem`, sidestepping inline
-  GraphQL fragments that monday's iframe proxy doesn't always honor
+  and parses raw JSON in `boardQueries.normalizeItem` — avoids typed
+  fragments (`... on StatusValue`) so the query works regardless of which
+  API version the iframe proxy is pinned to
 
 ### 3. Designer hits "+ New order" — intake modal
 
@@ -497,11 +498,10 @@ Then paste the IDs into `boardConstants.js` and re-deploy the frontend.
 - **Resilient by design** — the frontend ships a bundled fragrance catalog
   it falls back to whenever the API is unreachable, so the Kanban never
   breaks even if the backend is down.
-- **Schema-version-agnostic queries** — `getOrderItems` deliberately avoids
-  inline GraphQL fragments on `column_values` (which monday's iframe proxy
-  doesn't always honor across API versions) and instead parses the raw
-  `value` JSON in client code. Works on every version monday currently
-  serves.
+- **Schema-version-agnostic queries** — `getOrderItems` uses the universal
+  `column_values { id, type, text, value }` fields and parses the raw JSON
+  in client code, avoiding typed fragments that depend on a specific API
+  version. Works regardless of which version the iframe proxy is pinned to.
 
 ## Submission
 
