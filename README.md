@@ -16,14 +16,17 @@ Built as a take-home assessment for monday.com.
   column.
 - **Drag-and-drop status updates** (`@dnd-kit/core`): drag a card across
   columns to call `change_simple_column_value` on the status column.
-  Optimistic UI; rolls back on failure.
+  Optimistic UI; rolls back on failure. Columns are also drag-reorderable
+  (`@dnd-kit/sortable`) with order persisted to `localStorage`.
 - **Order intake modal**: a Vibe-native modal form with three sections —
   Customer info, Fragrance selections (3 distinct picks), and Order details
   (quantity + optional inscription). Validation runs locally and submit uses
   `create_item` against the live Production Orders board.
-- **Custom Order Details modal**: clicking a card opens a Vibe modal that
-  pulls fragrance metadata (image, category, scent description) from the
-  Fragrance API and renders it as a rich ingredient card. A "View in monday"
+- **Custom Order Details modal**: clicking a card opens a Vibe modal with a
+  master-detail layout — the left pane lists the order's candles, and tapping
+  the arrow on any candle slides into a **Recipe pane** that breaks the
+  fragrance description into Top / Heart / Base tiers with ingredient lists.
+  Recipe data is pulled live from the Fragrance API. A "View in monday"
   button hands off to `monday.execute("openItemCard")` for first-party editing
   (status, dates, files, comments, automations).
 - **Analytics modal — production performance**: a second header button
@@ -36,9 +39,10 @@ Built as a take-home assessment for monday.com.
   penalize the production team — see `COMPLETED_STATUSES` in
   `frontend/src/api/boardConstants.js`.
 - **Fragrance CRUD API** on monday-code: tiny Express service backed by
-  `@mondaycom/apps-sdk` Storage. Auto-seeds 10 starter fragrances on first
-  boot. Falls back to an in-memory store when no `MONDAY_TOKEN` is set so the
-  backend Just Works for local dev.
+  `@mondaycom/apps-sdk` Storage. Auto-seeds 16 starter fragrances on boot
+  (upsert — adds new entries, refreshes existing ones). Falls back to an
+  in-memory store when no `MONDAY_TOKEN` is set so the backend Just Works
+  for local dev.
 - **Automation**: configured in monday's no-code automation builder (see
   below) — fires when status flips to "New Order" and notifies the production
   manager.
@@ -60,7 +64,7 @@ Built as a take-home assessment for monday.com.
    │   - OrderModal (intake form)         │
    │   - OrderDetailsModal (rich view)    │
    │   - AnalyticsModal (SLA + throughput)│
-   │   - dnd-kit drag-and-drop            │
+   │   - dnd-kit drag-and-drop + sortable │
    │   - Vibe components only             │
    └─────┬────────────────────┬───────────┘
          │                    │
@@ -139,9 +143,13 @@ notifications without any code from us.
 
 - Drag-and-drop (`@dnd-kit/core` PointerSensor + KeyboardSensor) →
   `monday.api()` `change_simple_column_value` on the status column
+- Columns are drag-reorderable (`@dnd-kit/sortable`); order persists
+  in `localStorage`
 - Optimistic UI; rolls back to the previous status on API failure
-- Click a card → `OrderDetailsModal` (Vibe `Modal`) reads fragrance
-  metadata from `GET /fragrances` and renders ingredient cards with imagery
+- Click a card → `OrderDetailsModal` (Vibe `Modal`) with a master-detail
+  slide layout — candle list on the left, recipe pane on the right — reads
+  fragrance metadata from `GET /fragrances` and renders tier-based
+  ingredient cards
 - "Open in Monday" button calls `monday.execute("openItemCard")` to hand
   off to monday's first-party item panel for files, comments, native
   columns, and any board-level automations
@@ -237,7 +245,7 @@ cd frontend && npm start           # combined: vite + tunnel via concurrently
 
 ```bash
 curl http://localhost:8080/health           # backend liveness
-curl http://localhost:8301/api/fragrances   # frontend → backend (proxied)
+curl http://localhost:8301/api/fragrances   # frontend → backend (proxied, 16 fragrances)
 curl https://<tunnel-url>/api/fragrances     # tunnel → frontend → backend
 ```
 
@@ -334,7 +342,7 @@ all share one HTTPS origin — no CORS, no mixed-content errors.
 
 ```bash
 curl http://localhost:8080/health             # → {"status":"ok",...}
-curl http://localhost:8301/api/fragrances     # → 10 fragrances (proxied)
+curl http://localhost:8301/api/fragrances     # → 16 fragrances (proxied)
 curl https://<tunnel>/api/fragrances           # → same, over HTTPS
 ```
 
@@ -478,9 +486,10 @@ Then paste the IDs into `boardConstants.js` and re-deploy the frontend.
 - **Native UX** — Vibe components throughout; the board view feels like a
   first-party monday feature.
 - **Replaces _and_ extends the table experience** — the custom Order
-  Details modal pulls fragrance metadata into a rich ingredient card the
-  table can't show, while a "View in monday" button still hands off to the
-  native Item Card for first-party editing.
+  Details modal pulls fragrance metadata into a master-detail recipe view
+  the table can't show (Top / Heart / Base ingredient tiers parsed from the
+  fragrance description), while a "View in monday" button still hands off
+  to the native Item Card for first-party editing.
 - **Catalog ↔ board sync** — the create-order mutation passes
   `create_labels_if_missing: true` to the dropdown column, so any fragrance
   added through the backend's CRUD API is automatically adopted as a valid
@@ -496,5 +505,4 @@ Then paste the IDs into `boardConstants.js` and re-deploy the frontend.
 
 ## Submission
 
-Built per the take-home prompt provided February 2026. Presentation video
-and walkthrough included separately.
+Built per the take-home prompt provided February 2026.
