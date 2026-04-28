@@ -65,30 +65,6 @@ leaving monday.
   Production Orders board (item rows)
 ```
 
-## Repo layout
-
-```
-.
-├── frontend/        # Board View (Vite + React + Vibe)
-│   ├── src/
-│   │   ├── api/             # boardItems, boardMutations, boardActivity, boardConstants, fragrancesApi
-│   │   ├── components/
-│   │   │   ├── KanbanView/        # board, columns, cards, useKanbanBoard hook
-│   │   │   ├── OrderModal/        # intake form
-│   │   │   ├── OrderDetailsModal/ # order detail + recipe pane
-│   │   │   └── AnalyticsModal/    # SLA, throughput, useAnalyticsData hook
-│   │   ├── data/fragrances.js     # bundled fallback catalog
-│   │   └── lib/                   # monday SDK, validators, SLA math, formatters
-│   └── vite.config.js
-├── backend/         # Fragrance CRUD API (Express + apps-sdk Storage)
-│   └── src/
-│       ├── routes/          # health, fragrances
-│       ├── services/        # fragranceStore (Storage or in-memory)
-│       └── seed/            # starter fragrance data
-├── .env.example
-└── README.md
-```
-
 ## Getting started
 
 ### One-time setup
@@ -151,14 +127,14 @@ In Developer Center → **Build → OAuth & Permissions**:
 
 ## Future improvements
 
-- **Generalize beyond candle production** — make the board view
+- **Generalize beyond candle production** Make the board view
   configurable for other manufacturing and fulfillment workflows.
 
-- **Custom intake form builder** — let admins define their own order
+- **Custom intake form builder** Let admins define their own order
   fields without code changes.
 
-- **Inventory management UI** — a CRUD interface for managing raw
+- **Inventory management UI** A CRUD interface for managing raw
   materials and stock levels alongside the fragrance catalog.
 
-- **Shipping integration** — connect to UPS / FedEx APIs to
-  auto-track shipments and surface delivery status on the board.
+- **Shipping integration** Connect to UPS / FedEx APIs to auto-track
+  shipments and surface delivery status on the board.
