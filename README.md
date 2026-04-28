@@ -5,54 +5,39 @@ corporate candle gift box business. Designers can spin up a new gift-box order
 in seconds; production sees a Kanban board of in-flight orders and can drag
 work across stages without ever leaving monday.
 
-Built as a take-home assessment for monday.com.
-
 ## What's in the app
 
-- **Custom Board View — "Production Pipeline"**: a purpose-built Kanban that
-  groups items by status (New Order → Working on it → Ship → Done, plus
-  Stuck), renders order-shaped cards (customer + fragrance chips + qty +
-  relative time), and exposes a primary "+ New order" action on the first
-  column.
-- **Drag-and-drop status updates** (`@dnd-kit/core`): drag a card across
-  columns to call `change_simple_column_value` on the status column.
-  Optimistic UI; rolls back on failure. Columns are also drag-reorderable
-  (`@dnd-kit/sortable`) with order persisted to `localStorage`.
-- **Order intake modal**: a Vibe-native modal form with three sections —
-  Customer info, Fragrance selections (3 distinct picks), and Order details
-  (quantity + optional inscription). Validation runs locally and submit uses
-  `create_item` against the live Production Orders board.
-- **Custom Order Details modal**: clicking a card opens a Vibe modal with a
-  master-detail layout — the left pane lists the order's candles, and tapping
-  the arrow on any candle slides into a **Recipe pane** that breaks the
-  fragrance description into Top / Heart / Base tiers with ingredient lists.
-  Recipe data is pulled live from the Fragrance API. A "View in monday"
-  button hands off to `monday.execute("openItemCard")` for first-party editing
-  (status, dates, files, comments, automations).
-- **Analytics modal — production performance**: a second header button
-  ("Analytics") opens a Vibe modal that derives every order's `completed_at`
-  from monday's `activity_logs` and computes turnaround, on-time rate,
-  throughput, and a past-SLA list — all client-side, with **zero board
-  schema changes** required. SLA target lives in
-  `frontend/src/lib/sla.js` so it's a one-line tweak. The SLA clock stops
-  at **Ship** (production-complete) so carrier transit time doesn't
-  penalize the production team — see `COMPLETED_STATUSES` in
-  `frontend/src/api/boardConstants.js`.
-- **Fragrance CRUD API** on monday-code: tiny Express service backed by
-  `@mondaycom/apps-sdk` Storage. Auto-seeds 16 starter fragrances on boot
-  (upsert — adds new entries, refreshes existing ones). Falls back to an
-  in-memory store when no `MONDAY_TOKEN` is set so the backend Just Works
-  for local dev.
-- **Automation**: configured in monday's no-code automation builder (see
-  below) — fires when status flips to "New Order" and notifies the production
-  manager.
+- **Kanban Board View** — groups orders by status (New Order → Working on
+  it → Ship → Done / Stuck) with drag-and-drop between columns.
+
+- **Drag-and-drop** — drag cards to change status (optimistic UI, rolls
+  back on failure). Columns are also reorderable via drag.
+
+- **Order intake modal** — three-section form (customer, 3 fragrance
+  picks, quantity + inscription). Creates an item on the Production
+  Orders board on submit.
+
+- **Order details + recipe view** — click a card to see order details;
+  tap a candle's arrow to slide into a recipe pane showing Top / Heart /
+  Base ingredient tiers pulled from the Fragrance API.
+
+- **Analytics modal** — turnaround time, on-time rate, throughput chart,
+  and past-SLA list. Derived from `activity_logs`, no extra board columns
+  needed. SLA clock stops at Ship so transit doesn't penalize production.
+
+- **Fragrance CRUD API** — Express service on monday-code backed by
+  `@mondaycom/apps-sdk` Storage. Seeds 16 fragrances on boot. Falls back
+  to in-memory for local dev.
+
+- **Automation** — no-code automation: when status changes to "New Order",
+  notify board subscribers.
 
 ## Architecture
 
 ```
                     ┌─────────────────────────────────────────┐
                     │         Production Orders board         │
-                    │  (asset provided by the prompt)         │
+                    │                                         │
                     └────┬────────────────────────────────┬───┘
                          │                                │
             our Board View tab                native Item Card panel
@@ -124,21 +109,15 @@ the platform inventory at a glance.
 
 ### 5. monday's no-code automations fire
 
-Three automations run on the live Production Orders board. All are
-configured in monday's no-code Automate menu — no code in this repo
-creates them. See [Automation setup](#automation-setup-manual-in-mondays-ui).
+An automation runs on the live Production Orders board, configured in
+monday's no-code Automate menu — no automation code in this repo.
+See [Automation setup](#automation-setup-manual-in-mondays-ui).
 
 - _When status changes to **New Order**, notify **subscribers** that
-  **{Item Name}** needs production._ — the must-have automation.
-- _When a column changes in this board, notify **subscribers** that
-  **{Item Name}** was updated._ — keeps stakeholders in sync when an
-  order is edited via the native item card.
-- _When an item is deleted from this board, notify **subscribers** that
-  **{Item Name}** was deleted._ — captures the item name before removal
-  so the notification is still meaningful.
+  **{Item Name}** needs production._
 
 monday's automation engine watches the event stream and fires the
-notifications without any code from us.
+notification without any code from us.
 
 ### 6. Production manager works through the pipeline
 
@@ -177,7 +156,7 @@ notifications without any code from us.
 | **monday CDN**                             | hosts the client-side bundle (via `mapps code:push --client-side`)                                    |
 | **monday tunnel** (`mapps tunnel:create`)  | dev-time HTTPS exposure for the Vite server                                                           |
 | **monday Vibe**                            | `Modal`, `ModalContent`, `Button`, `Heading`, `Text`, `Loader`, `AttentionBox`, plus form primitives  |
-| **monday no-code Automations**             | three custom automations on the live Production Orders board (new order, item updated, item deleted)  |
+| **monday no-code Automations**             | new-order notification on the live Production Orders board                                            |
 | **monday OAuth scopes**                    | `boards:read`, `boards:write`, `me:read` (deployed installs)                                          |
 | **monday Item Card**                       | reused for native editing via `monday.execute("openItemCard")`                                        |
 
@@ -186,8 +165,7 @@ notifications without any code from us.
 The constants in
 [`frontend/src/api/boardConstants.js`](frontend/src/api/boardConstants.js)
 were captured by running `getBoardSchema()` against the live "Production
-Orders" board (id `18410280508`) — the asset the prompt provided. Nothing
-was assumed. If you install the app on a different account, re-run that
+Orders" board (id `18410280508`). If you install the app on a different account, re-run that
 helper and update the constants — see
 [Updating column IDs](#updating-column-ids).
 
@@ -259,7 +237,7 @@ cd backend && npm run deploy    # mapps code:push  (server-side service)
 
 If `mapps code:push` reports "the latest app version is live" and refuses
 to overwrite, either create a new draft version in the Developer Center,
-or pass `--force` (acceptable for take-home / pre-customer iteration):
+or pass `--force`:
 
 ```bash
 cd frontend && npx mapps code:push --client-side -d build -a <APP_ID> --force
@@ -406,60 +384,6 @@ If you skip these, deployed installs will fail with
 2. Promote the draft to **Live**. The app then appears in the workspace's
    App Marketplace, ready to install on a board.
 
-## Automation setup (manual, in monday's UI)
-
-The take-home asks for "at least one automation." All three below are
-configured in monday's no-code automation builder, directly on the
-Production Orders board — there is no automation code in this repo.
-
-For each one: open the board → click **Automate** (top-right) →
-**+ Create custom automation** → fill in the sentence shown → **Create
-automation**.
-
-### 1. New order notification — must-have
-
-> When **status** changes to **New Order**, notify **subscribers** that
-> **{Item Name}** needs production.
-
-Fires every time our Kanban intake modal creates an order, because the
-form lands the new item with status set to "New Order" (see
-`createOrderItem` in `frontend/src/api/boardQueries.js`).
-
-### 2. Item updated notification
-
-> When **a column changes** in this board, notify **subscribers** that
-> **{Item Name}** was updated.
-
-Fires whenever an order is edited — either via drag-and-drop in our
-Kanban (status change) or via the native item card after a designer
-clicks **Open in Monday** on the order details modal.
-
-### 3. Item deleted notification
-
-> When **an item is deleted** from this board, notify **subscribers**
-> that **{Item Name}** was deleted.
-
-Fires when an order is removed via the native item card. monday captures
-the item name before the row is removed so the notification still
-identifies which order disappeared.
-
-### Why "subscribers" instead of a named user
-
-Picking **subscribers** as the recipient means everyone added to the
-board receives the notification, not just one hard-coded user. As the
-customer's team grows, the automation scales without reconfiguration.
-For a single-user trial workspace, the only subscriber is you — so the
-notifications still reach you during the demo.
-
-### Other automations that pair well with this board
-
-If the customer wants to extend further, these are zero-code additions:
-
-- `When status changes to Done, set Order Complete Date to today` —
-  drives any "Order Turnaround" formula column you choose to add.
-- `Every day at 9:00 AM, notify subscribers that orders in [Stuck]
-need attention` — surfaces stalled work without manual triage.
-
 ## Updating column IDs
 
 The Kanban talks to the board via column IDs hard-coded in
@@ -503,6 +427,3 @@ Then paste the IDs into `boardConstants.js` and re-deploy the frontend.
   in client code, avoiding typed fragments that depend on a specific API
   version. Works regardless of which version the iframe proxy is pinned to.
 
-## Submission
-
-Built per the take-home prompt provided February 2026.
