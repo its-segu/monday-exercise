@@ -1,29 +1,67 @@
 import React, { memo } from "react";
 import { Heading, Text, IconButton } from "@vibe/core";
-import { Add } from "@vibe/icons";
-import { useDroppable } from "@dnd-kit/core";
+import { Add, Drag } from "@vibe/icons";
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import OrderCard from "./OrderCard";
 import { STATUS_COLORS, STATUS_COLOR_FALLBACK } from "../../api/boardConstants";
 import styles from "./KanbanView.module.scss";
 
-function KanbanColumn({ status, orders, onAddClick, onOpenCard }) {
+function KanbanColumn({
+  status,
+  orders,
+  onAddClick,
+  onOpenCard,
+  activeDragType,
+}) {
   const accent = STATUS_COLORS[status] || STATUS_COLOR_FALLBACK;
-  const { setNodeRef, isOver } = useDroppable({
-    id: `col-${status}`,
-    data: { status },
+  const {
+    setNodeRef,
+    setActivatorNodeRef,
+    transform,
+    transition,
+    isDragging,
+    isOver,
+    attributes,
+    listeners,
+  } = useSortable({
+    id: status,
+    data: { type: "column", status },
   });
 
-  const className = `${styles.column}${isOver ? ` ${styles.columnOver}` : ""}`;
+  // Highlight the column only when a card is being dropped — column-on-column
+  // drags get their visual cue from sortable's slide animation instead.
+  const showCardDropHighlight = isOver && activeDragType === "card";
+
+  const className = [
+    styles.column,
+    showCardDropHighlight ? styles.columnOver : "",
+    isDragging ? styles.columnDragging : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  const wrapperStyle = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
 
   return (
-    <div className={styles.columnWrapper}>
+    <div ref={setNodeRef} className={styles.columnWrapper} style={wrapperStyle}>
       <section
-        ref={setNodeRef}
         className={className}
         aria-label={`${status} column`}
         style={{ "--column-accent": accent }}
       >
-        <header className={styles.columnHeader}>
+        <header
+          ref={setActivatorNodeRef}
+          className={styles.columnHeader}
+          {...attributes}
+          {...listeners}
+        >
+          <span className={styles.columnGrip} aria-hidden>
+            <Drag />
+          </span>
           <div className={styles.columnTitle}>
             <Heading type="h3" weight="medium" maxLines={1}>
               {status}
@@ -39,6 +77,8 @@ function KanbanColumn({ status, orders, onAddClick, onOpenCard }) {
               ariaLabel="Add new order"
               tooltipContent="Add new order"
               onClick={onAddClick}
+              // Stop pointer events from reaching the sortable activator.
+              onPointerDown={(e) => e.stopPropagation()}
             />
           )}
         </header>

@@ -15,6 +15,11 @@ import {
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  horizontalListSortingStrategy,
+} from "@dnd-kit/sortable";
 import monday from "../../lib/monday";
 import { getOrderItems, updateOrderStatus } from "../../api/boardQueries";
 import { STATUS_LABELS, STATUS_ORDER } from "../../api/boardConstants";
@@ -27,6 +32,7 @@ import styles from "./KanbanView.module.scss";
 
 const RELOAD_DEBOUNCE_MS = 250;
 const CONTEXT_FALLBACK_MS = 1500;
+const COLUMN_ORDER_KEY = "monday-candle:columnOrder";
 
 const REFRESH_EVENTS = new Set([
   "new_items",
@@ -44,6 +50,25 @@ function getFallbackBoardId() {
   return fromEnv ? String(fromEnv) : null;
 }
 
+function loadColumnOrder() {
+  if (typeof window === "undefined") return STATUS_ORDER;
+  try {
+    const stored = window.localStorage.getItem(COLUMN_ORDER_KEY);
+    if (!stored) return STATUS_ORDER;
+    const arr = JSON.parse(stored);
+    if (
+      Array.isArray(arr) &&
+      arr.length === STATUS_ORDER.length &&
+      arr.every((s) => STATUS_ORDER.includes(s))
+    ) {
+      return arr;
+    }
+  } catch {
+    /* fall through */
+  }
+  return STATUS_ORDER;
+}
+
 export default function KanbanView() {
   const [boardId, setBoardId] = useState(null);
   const [orders, setOrders] = useState([]);
@@ -51,9 +76,55 @@ export default function KanbanView() {
   const [error, setError] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [analyticsOpen, setAnalyticsOpen] = useState(false);
-  const [activeOrder, setActiveOrder] = useState(null);
+  const [activeItem, setActiveItem] = useState(null); // { type, order } | { type, status }
   const [detailsOrderId, setDetailsOrderId] = useState(null);
+  const [columnOrder, setColumnOrder] = useState(loadColumnOrder);
   const reloadTimer = useRef(null);
+  const kanbanBodyRef = useRef(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem(
+        COLUMN_ORDER_KEY,
+        JSON.stringify(columnOrder),
+      );
+    } catch {
+      /* localStorage may be unavailable in iframes */
+    }
+  }, [columnOrder]);
+
+  // Translate vertical wheel into horizontal kanban scroll when the cursor
+  // isn't over a column that can absorb the scroll itself (matches monday's
+  // native kanban feel). Native horizontal wheel (shift+wheel, trackpad
+  // gestures) is left untouched.
+  useEffect(() => {
+    const el = kanbanBodyRef.current;
+    if (!el) return undefined;
+
+    const cardListSelector = `.${styles.cardList}`;
+
+    function onWheel(e) {
+      if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
+      if (e.deltaY === 0) return;
+
+      const cardList = e.target.closest?.(cardListSelector);
+      if (cardList) {
+        const goingDown = e.deltaY > 0;
+        const atBottom =
+          cardList.scrollTop + cardList.clientHeight >=
+          cardList.scrollHeight - 1;
+        const atTop = cardList.scrollTop <= 0;
+        if (goingDown ? !atBottom : !atTop) return;
+      }
+
+      e.preventDefault();
+      el.scrollLeft += e.deltaY;
+    }
+
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, []);
 
   // Press-and-hold lets horizontal pan gestures pass through cards cleanly
   // (matches monday's native kanban). A pure distance constraint hijacks
@@ -170,27 +241,25 @@ export default function KanbanView() {
 
   const handleDragStart = useCallback(
     (event) => {
+      const data = event?.active?.data?.current;
+      if (data?.type === "column") {
+        setActiveItem({ type: "column", status: data.status });
+        return;
+      }
       const found = orders.find((o) => o.id === event?.active?.id);
-      if (found) setActiveOrder(found);
+      if (found) setActiveItem({ type: "card", order: found });
     },
     [orders],
   );
 
   const handleDragCancel = useCallback(() => {
-    setActiveOrder(null);
+    setActiveItem(null);
   }, []);
 
-  const handleDragEnd = useCallback(
-    async (event) => {
-      setActiveOrder(null);
-
-      const itemId = event?.active?.id;
-      const targetStatus = event?.over?.data?.current?.status;
-      if (!itemId || !targetStatus || !boardId) return;
-
+  const moveCardStatus = useCallback(
+    async (itemId, targetStatus) => {
       const current = orders.find((o) => o.id === itemId);
       if (!current || current.statusLabel === targetStatus) return;
-
       const previousStatus = current.statusLabel;
 
       // Optimistic update — revert below if the API write fails.
@@ -223,6 +292,37 @@ export default function KanbanView() {
     [boardId, orders],
   );
 
+  const handleDragEnd = useCallback(
+    (event) => {
+      setActiveItem(null);
+      const { active, over } = event;
+      if (!over) return;
+
+      const activeType = active.data?.current?.type;
+
+      if (activeType === "column") {
+        if (active.id !== over.id) {
+          setColumnOrder((prev) => {
+            const oldIdx = prev.indexOf(active.id);
+            const newIdx = prev.indexOf(over.id);
+            if (oldIdx === -1 || newIdx === -1) return prev;
+            return arrayMove(prev, oldIdx, newIdx);
+          });
+        }
+        return;
+      }
+
+      // Card drag — `over` is either a column sortable id (the status string)
+      // or, defensively, a status carried on the droppable's data payload.
+      const itemId = active.id;
+      const targetStatus = over.data?.current?.status || over.id;
+      if (!itemId || !targetStatus || !boardId) return;
+      if (!STATUS_ORDER.includes(targetStatus)) return;
+      moveCardStatus(itemId, targetStatus);
+    },
+    [boardId, moveCardStatus],
+  );
+
   const handleOpenNewOrder = useCallback(() => setModalOpen(true), []);
   const handleCloseNewOrder = useCallback(() => setModalOpen(false), []);
   const handleOpenAnalytics = useCallback(() => setAnalyticsOpen(true), []);
@@ -238,6 +338,8 @@ export default function KanbanView() {
       </div>
     );
   }
+
+  const activeType = activeItem?.type || null;
 
   return (
     <div className={styles.kanbanRoot}>
@@ -285,23 +387,31 @@ export default function KanbanView() {
         onDragCancel={handleDragCancel}
         onDragEnd={handleDragEnd}
       >
-        <div className={styles.kanbanBody}>
-          {STATUS_ORDER.map((status) => (
-            <KanbanColumn
-              key={status}
-              status={status}
-              orders={grouped[status] || []}
-              onAddClick={
-                status === STATUS_LABELS.newOrder
-                  ? handleOpenNewOrder
-                  : undefined
-              }
-              onOpenCard={handleOpenCard}
-            />
-          ))}
-        </div>
+        <SortableContext
+          items={columnOrder}
+          strategy={horizontalListSortingStrategy}
+        >
+          <div ref={kanbanBodyRef} className={styles.kanbanBody}>
+            {columnOrder.map((status) => (
+              <KanbanColumn
+                key={status}
+                status={status}
+                orders={grouped[status] || []}
+                onAddClick={
+                  status === STATUS_LABELS.newOrder
+                    ? handleOpenNewOrder
+                    : undefined
+                }
+                onOpenCard={handleOpenCard}
+                activeDragType={activeType}
+              />
+            ))}
+          </div>
+        </SortableContext>
         <DragOverlay dropAnimation={null}>
-          {activeOrder ? <OrderCardOverlay order={activeOrder} /> : null}
+          {activeItem?.type === "card" ? (
+            <OrderCardOverlay order={activeItem.order} />
+          ) : null}
         </DragOverlay>
       </DndContext>
 

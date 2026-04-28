@@ -9,7 +9,6 @@ $border: var(--ui-border-color, #d0d4e4);
   gap: 16px;
   padding: 20px 24px 24px;
   height: 100%;
-  min-height: 100vh;
   background: $page-bg;
   color: var(--primary-text-color);
   font-family: var(--font-family);
@@ -89,11 +88,45 @@ $border: var(--ui-border-color, #d0d4e4);
   justify-content: space-between;
   gap: 8px;
   height: 36px;
-  padding: 0 8px 0 12px;
+  padding: 0 8px 0 8px;
   background: var(--column-accent, #c4c4c4);
   color: #ffffff;
   font-weight: 700;
   flex-shrink: 0;
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+
+  &:active {
+    cursor: grabbing;
+  }
+}
+
+.columnGrip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  opacity: 0.65;
+  transition: opacity 120ms ease;
+  color: #ffffff;
+
+  svg {
+    width: 14px;
+    height: 14px;
+    fill: currentColor;
+  }
+}
+
+.columnHeader:hover .columnGrip {
+  opacity: 1;
+}
+
+.columnDragging {
+  opacity: 0.55;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.18);
 }
 
 .columnTitle {
@@ -148,8 +181,10 @@ $border: var(--ui-border-color, #d0d4e4);
   gap: 8px;
   padding: 10px;
   overflow-y: auto;
+  overscroll-behavior: contain;
   flex: 1;
   min-height: 0;
+  scrollbar-gutter: stable;
 }
 
 .emptyHint {
