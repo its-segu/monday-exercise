@@ -1,6 +1,6 @@
 $page-bg: var(--primary-background-color);
-$column-bg: #f0f3f7;
-$card-bg: #ffffff;
+$column-bg: var(--secondary-background-color);
+$card-bg: var(--primary-background-color);
 $border: var(--ui-border-color, #d0d4e4);
 
 .kanbanRoot {

@@ -175,7 +175,7 @@
   border-radius: 6px;
   background-size: cover;
   background-position: center;
-  background-color: #eef0f5;
+  background-color: var(--secondary-background-color);
   flex: 0 0 56px;
 }
 
@@ -323,7 +323,7 @@ $tier-base: #8a4321; // rust — deep finish
   width: 88px;
   height: 88px;
   border-radius: 10px;
-  background-color: #eef0f5;
+  background-color: var(--secondary-background-color);
   background-size: cover;
   background-position: center;
   border: 1px solid rgba(0, 0, 0, 0.06);
