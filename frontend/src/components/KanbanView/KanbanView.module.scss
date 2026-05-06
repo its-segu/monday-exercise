@@ -1,13 +1,12 @@
 $page-bg: var(--primary-background-color);
-$column-bg: var(--secondary-background-color);
+$column-bg: var(--allgrey-background-color, #f6f7fb);
 $card-bg: var(--primary-background-color);
 $border: var(--ui-border-color, #d0d4e4);
 
 .kanbanRoot {
   display: flex;
   flex-direction: column;
-  gap: 0;
-  padding: 12px 24px 24px;
+  padding: 12px 24px 0;
   height: 100%;
   background: $page-bg;
   color: var(--primary-text-color);
@@ -16,41 +15,12 @@ $border: var(--ui-border-color, #d0d4e4);
   overflow: hidden;
 }
 
-.headerRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.headerCopy {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.headerActions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
-}
-
-.analyticsButton {
-  svg {
-    color: var(--negative-color, #df2f4a) !important;
-    fill: currentColor;
-  }
-}
-
 .kanbanBody {
   display: flex;
   gap: 16px;
   overflow-x: auto;
   overflow-y: hidden;
   overscroll-behavior: contain;
-  padding-bottom: 12px;
-  align-items: stretch;
   flex: 1;
   min-height: 0;
 }
@@ -59,15 +29,16 @@ $border: var(--ui-border-color, #d0d4e4);
   flex: 0 0 260px;
   max-width: 260px;
   display: flex;
-  min-height: 0;
+  height: 100%;
   touch-action: pan-x pan-y !important;
 }
 
 .column {
   display: flex;
   flex-direction: column;
+  width: 100%;
   background: $column-bg;
-  border-radius: 8px;
+  border-radius: 8px 8px 0 0;
   overflow: hidden;
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
   transition:
@@ -75,6 +46,10 @@ $border: var(--ui-border-color, #d0d4e4);
     transform 120ms ease;
   flex: 1;
   min-height: 0;
+
+  :global(.hacker_theme-app-theme) & {
+    background: var(--secondary-background-color);
+  }
 }
 
 .columnOver {
@@ -319,11 +294,11 @@ $border: var(--ui-border-color, #d0d4e4);
   height: 20px;
   padding: 0 8px;
   border-radius: 999px;
-  background: rgba(0, 200, 117, 0.14);
-  color: #007a47;
+  background: var(--positive-color-selected, rgba(0, 200, 117, 0.14));
+  color: var(--positive-color, #007a47);
   font-size: 11px;
   font-weight: 600;
-  font-family: monospace;
+  font-family: ui-monospace, "SF Mono", monospace;
   letter-spacing: 0.3px;
   white-space: nowrap;
 }

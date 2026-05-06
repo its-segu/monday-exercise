@@ -15,20 +15,6 @@ $border: var(--ui-border-color, #d0d4e4);
   overflow: hidden;
 }
 
-.headerRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.headerActions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
-}
-
 .tableWrap {
   flex: 1;
   min-height: 0;
@@ -60,7 +46,7 @@ $border: var(--ui-border-color, #d0d4e4);
   letter-spacing: 0.4px;
   position: sticky;
   top: 0;
-  background: var(--secondary-background-color);
+  background: var(--allgrey-background-color, #f6f7fb);
   z-index: 1;
 }
 
@@ -83,7 +69,7 @@ $border: var(--ui-border-color, #d0d4e4);
   height: 32px;
   border-radius: 6px;
   object-fit: cover;
-  background: var(--secondary-background-color);
+  background: var(--allgrey-background-color, #f6f7fb);
   flex-shrink: 0;
 }
 
@@ -91,7 +77,7 @@ $border: var(--ui-border-color, #d0d4e4);
   width: 32px;
   height: 32px;
   border-radius: 6px;
-  background: var(--secondary-background-color);
+  background: var(--allgrey-background-color, #f6f7fb);
   flex-shrink: 0;
 }
 
