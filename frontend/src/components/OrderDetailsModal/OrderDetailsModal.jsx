@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Modal, ModalContent } from "@vibe/core";
 import { fragrancesApi } from "../../api/fragrancesApi";
 import { FRAGRANCES as BUNDLED_FRAGRANCES } from "../../data/fragrances";
@@ -13,6 +13,7 @@ export default function OrderDetailsModal({ show, order, onClose }) {
   const [usedFallback, setUsedFallback] = useState(false);
   const [loadingCatalog, setLoadingCatalog] = useState(false);
   const [recipeIndex, setRecipeIndex] = useState(null);
+  const slideContainerRef = useRef(null);
 
   useEffect(() => {
     if (!show) {
@@ -68,6 +69,14 @@ export default function OrderDetailsModal({ show, order, onClose }) {
   const handleOpenRecipe = useCallback((idx) => setRecipeIndex(idx), []);
   const handleCloseRecipe = useCallback(() => setRecipeIndex(null), []);
 
+  useEffect(() => {
+    const el = slideContainerRef.current?.closest('[role="dialog"]');
+    if (el) {
+      const scrollable = el.querySelector('[class*="modalContent"], [class*="ModalContent"]') || el;
+      scrollable.scrollTop = 0;
+    }
+  }, [recipeIndex]);
+
   const handleOpenInMonday = useCallback(() => {
     if (!order) return;
     monday.execute("openItemCard", { itemId: order.id });
@@ -92,7 +101,7 @@ export default function OrderDetailsModal({ show, order, onClose }) {
       contentSpacing
     >
       <ModalContent>
-        <div className={styles.slideContainer}>
+        <div ref={slideContainerRef} className={styles.slideContainer}>
           <div
             className={`${styles.slideTrack}${showingRecipe ? ` ${styles.showRecipe}` : ""}`}
           >

@@ -1,0 +1,21 @@
+.fieldStack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-medium, 16px);
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-small, 8px);
+  margin-top: 8px;
+  padding: 14px 0 8px;
+  border-top: 1px solid var(--ui-border-color);
+}
+
+.error {
+  color: var(--negative-color);
+  font-size: 12px;
+  margin-top: 4px;
+}

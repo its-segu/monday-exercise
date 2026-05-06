@@ -1,6 +1,7 @@
 import React, { memo } from "react";
 import { Heading, Text } from "@vibe/core";
 import { useDraggable } from "@dnd-kit/core";
+import { STATUS_LABELS } from "../../api/boardConstants";
 import styles from "./KanbanView.module.scss";
 
 const TAG_PALETTE = [
@@ -39,8 +40,20 @@ function relativeTime(iso) {
   return new Date(iso).toLocaleDateString();
 }
 
+function generateTrackingNumber(orderId) {
+  const str = String(orderId);
+  let hash = 0;
+  for (let i = 0; i < str.length; i += 1) {
+    hash = (hash * 31 + str.charCodeAt(i)) >>> 0;
+  }
+  const prefix = "MN";
+  const num = String(hash).padStart(10, "0").slice(0, 10);
+  return `${prefix}${num}`;
+}
+
 function CardBody({ order, dragging }) {
-  const { id, name, fragrances = [], quantity, createdAt } = order;
+  const { id, name, fragrances = [], quantity, createdAt, statusLabel } = order;
+  const isDone = statusLabel === STATUS_LABELS.done;
   return (
     <>
       <div className={styles.cardTopRow}>
@@ -80,10 +93,14 @@ function CardBody({ order, dragging }) {
             {quantity ?? "—"}
           </Text>
         </span>
-        {!dragging && (
-          <Text type="text2" color="secondary">
-            {relativeTime(createdAt)}
-          </Text>
+        {isDone ? (
+          <span className={styles.trackingPill}>{generateTrackingNumber(id)}</span>
+        ) : (
+          !dragging && (
+            <Text type="text2" color="secondary">
+              {relativeTime(createdAt)}
+            </Text>
+          )
         )}
       </div>
     </>
@@ -119,6 +136,7 @@ function OrderCard({ order, onOpen }) {
       tabIndex={0}
       onClick={handleOpen}
       onKeyDown={(e) => {
+        if (isDragging) return;
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
           onOpen?.(order.id);

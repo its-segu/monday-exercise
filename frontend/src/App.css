@@ -15,6 +15,46 @@ body,
   overscroll-behavior: none;
 }
 
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.app-nav {
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: 0 24px;
+  border-bottom: 1px solid var(--ui-border-color, #d0d4e4);
+  background: var(--primary-background-color);
+}
+
+.app-nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 0;
+}
+
+.analytics-button svg {
+  color: var(--negative-color, #df2f4a) !important;
+  fill: currentColor;
+}
+
+.app-tab {
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.app-main {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
 * {
   box-sizing: border-box;
 }
