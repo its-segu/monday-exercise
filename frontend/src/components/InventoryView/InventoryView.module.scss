@@ -1,5 +1,5 @@
 $page-bg: var(--primary-background-color);
-$card-bg: #ffffff;
+$card-bg: var(--primary-background-color);
 $border: var(--ui-border-color, #d0d4e4);
 
 .root {
@@ -13,20 +13,6 @@ $border: var(--ui-border-color, #d0d4e4);
   font-family: var(--font-family);
   font-size: 14px;
   overflow: hidden;
-}
-
-.headerRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.headerActions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
 }
 
 .tableWrap {
@@ -60,7 +46,7 @@ $border: var(--ui-border-color, #d0d4e4);
   letter-spacing: 0.4px;
   position: sticky;
   top: 0;
-  background: #f8f9fb;
+  background: var(--allgrey-background-color, #f6f7fb);
   z-index: 1;
 }
 
@@ -69,7 +55,7 @@ $border: var(--ui-border-color, #d0d4e4);
 }
 
 .table tbody tr:hover {
-  background: rgba(0, 115, 234, 0.03);
+  background: var(--primary-selected-color, rgba(0, 115, 234, 0.03));
 }
 
 .nameCell {
@@ -83,7 +69,7 @@ $border: var(--ui-border-color, #d0d4e4);
   height: 32px;
   border-radius: 6px;
   object-fit: cover;
-  background: #f0f3f7;
+  background: var(--allgrey-background-color, #f6f7fb);
   flex-shrink: 0;
 }
 
@@ -91,7 +77,7 @@ $border: var(--ui-border-color, #d0d4e4);
   width: 32px;
   height: 32px;
   border-radius: 6px;
-  background: #f0f3f7;
+  background: var(--allgrey-background-color, #f6f7fb);
   flex-shrink: 0;
 }
 
@@ -101,8 +87,8 @@ $border: var(--ui-border-color, #d0d4e4);
   height: 22px;
   padding: 0 10px;
   border-radius: 999px;
-  background: rgba(0, 115, 234, 0.1);
-  color: #0060b9;
+  background: var(--primary-selected-color, rgba(0, 115, 234, 0.1));
+  color: var(--primary-color);
   font-size: 12px;
   font-weight: 500;
   white-space: nowrap;
