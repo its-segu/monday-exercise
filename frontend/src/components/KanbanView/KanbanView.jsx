@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { Heading, Loader, AttentionBox, Button, IconButton } from "@vibe/core";
-import { Dashboard } from "@vibe/icons";
+import { Loader, AttentionBox } from "@vibe/core";
 import {
   DndContext,
   DragOverlay,
@@ -44,7 +43,13 @@ function loadColumnOrder() {
   return STATUS_ORDER;
 }
 
-export default function KanbanView() {
+export default function KanbanView({
+  orderModalOpen,
+  setOrderModalOpen,
+  analyticsOpen,
+  setAnalyticsOpen,
+  onBoardReady,
+}) {
   const {
     boardId,
     orders,
@@ -55,12 +60,14 @@ export default function KanbanView() {
     handleCreated,
   } = useKanbanBoard();
 
-  const [modalOpen, setModalOpen] = useState(false);
-  const [analyticsOpen, setAnalyticsOpen] = useState(false);
   const [activeItem, setActiveItem] = useState(null);
   const [detailsOrderId, setDetailsOrderId] = useState(null);
   const [columnOrder, setColumnOrder] = useState(loadColumnOrder);
   const kanbanBodyRef = useRef(null);
+
+  useEffect(() => {
+    onBoardReady(Boolean(boardId));
+  }, [boardId, onBoardReady]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -155,19 +162,18 @@ export default function KanbanView() {
     [boardId, moveCardStatus],
   );
 
-  const handleOpenNewOrder = useCallback(() => setModalOpen(true), []);
-  const handleCloseNewOrder = useCallback(() => setModalOpen(false), []);
-  const handleOpenAnalytics = useCallback(() => setAnalyticsOpen(true), []);
-  const handleCloseAnalytics = useCallback(() => setAnalyticsOpen(false), []);
+  const handleOpenNewOrder = useCallback(() => setOrderModalOpen(true), [setOrderModalOpen]);
+  const handleCloseNewOrder = useCallback(() => setOrderModalOpen(false), [setOrderModalOpen]);
+  const handleCloseAnalytics = useCallback(() => setAnalyticsOpen(false), [setAnalyticsOpen]);
   const handleOpenCard = useCallback((id) => setDetailsOrderId(id), []);
   const handleCloseDetails = useCallback(() => setDetailsOrderId(null), []);
 
   const onCreated = useCallback(
     async (newItem, meta) => {
       await handleCreated(newItem, meta);
-      setModalOpen(false);
+      setOrderModalOpen(false);
     },
-    [handleCreated],
+    [handleCreated, setOrderModalOpen],
   );
 
   if (loading && !orders.length) {
@@ -184,34 +190,6 @@ export default function KanbanView() {
 
   return (
     <div className={styles.kanbanRoot}>
-      <header className={styles.headerRow}>
-        <div className={styles.headerCopy}>
-          <Heading type="h1" weight="bold">
-            Production Pipeline
-          </Heading>
-        </div>
-        <div className={styles.headerActions}>
-          <IconButton
-            icon={Dashboard}
-            size="medium"
-            kind="secondary"
-            ariaLabel="Open analytics"
-            tooltipContent="Analytics"
-            onClick={handleOpenAnalytics}
-            disabled={!boardId}
-            className={styles.analyticsButton}
-          />
-          <Button
-            size="medium"
-            kind="primary"
-            onClick={handleOpenNewOrder}
-            disabled={!boardId}
-          >
-            + New order
-          </Button>
-        </div>
-      </header>
-
       {error && (
         <div className={styles.errorWrap}>
           <AttentionBox
@@ -257,7 +235,7 @@ export default function KanbanView() {
       </DndContext>
 
       <OrderModal
-        show={modalOpen}
+        show={orderModalOpen}
         boardId={boardId}
         onClose={handleCloseNewOrder}
         onCreated={onCreated}

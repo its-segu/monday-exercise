@@ -1,0 +1,132 @@
+$page-bg: var(--primary-background-color);
+$card-bg: #ffffff;
+$border: var(--ui-border-color, #d0d4e4);
+
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px 24px 24px;
+  height: 100%;
+  background: $page-bg;
+  color: var(--primary-text-color);
+  font-family: var(--font-family);
+  font-size: 14px;
+  overflow: hidden;
+}
+
+.headerRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.tableWrap {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  border: 1px solid $border;
+  border-radius: 8px;
+  background: $card-bg;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.table th,
+.table td {
+  text-align: left;
+  padding: 10px 14px;
+  border-bottom: 1px solid $border;
+  vertical-align: middle;
+}
+
+.table th {
+  font-weight: 600;
+  color: var(--secondary-text-color);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  position: sticky;
+  top: 0;
+  background: #f8f9fb;
+  z-index: 1;
+}
+
+.table tr:last-child td {
+  border-bottom: none;
+}
+
+.table tbody tr:hover {
+  background: rgba(0, 115, 234, 0.03);
+}
+
+.nameCell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.thumb {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  object-fit: cover;
+  background: #f0f3f7;
+  flex-shrink: 0;
+}
+
+.thumbPlaceholder {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  background: #f0f3f7;
+  flex-shrink: 0;
+}
+
+.categoryBadge {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: rgba(0, 115, 234, 0.1);
+  color: #0060b9;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.actions {
+  display: flex;
+  gap: 4px;
+}
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 48px 24px;
+  text-align: center;
+  color: var(--secondary-text-color);
+}
+
+.loadingWrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 320px;
+}

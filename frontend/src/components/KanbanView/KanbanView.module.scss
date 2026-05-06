@@ -6,8 +6,8 @@ $border: var(--ui-border-color, #d0d4e4);
 .kanbanRoot {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 20px 24px 24px;
+  gap: 0;
+  padding: 12px 24px 24px;
   height: 100%;
   background: $page-bg;
   color: var(--primary-text-color);
@@ -311,6 +311,21 @@ $border: var(--ui-border-color, #d0d4e4);
   align-items: center;
   gap: 4px;
   font-weight: 600;
+}
+
+.trackingPill {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: rgba(0, 200, 117, 0.14);
+  color: #007a47;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: monospace;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
 }
 
 .loadingWrap,

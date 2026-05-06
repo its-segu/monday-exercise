@@ -126,35 +126,27 @@ export async function deleteFragrance(id) {
   return true;
 }
 
-// Upserts every fragrance from the seed file on every boot:
-//   - new ids are inserted
-//   - existing ids are refreshed, preserving original `created_at`
-// Switch to add-missing-only if real customer data ever needs protection.
+// Seeds only missing fragrances on boot, preserving any user-added inventory.
 export async function bulkSeedFragrances(fragrances) {
   const storage = getStorage();
   const existingIds = new Set(await readIndex());
   const now = new Date().toISOString();
 
-  const seeded = await Promise.all(
-    fragrances.map(async (f) => {
-      const existing = existingIds.has(f.id) ? await getFragrance(f.id) : null;
-      return {
-        ...f,
-        created_at: existing?.created_at || f.created_at || now,
-        updated_at: now,
-      };
-    }),
-  );
+  const toAdd = fragrances.filter((f) => !existingIds.has(f.id));
 
-  await Promise.all(seeded.map((f) => storage.set(fragranceKey(f.id), f)));
+  if (toAdd.length) {
+    const records = toAdd.map((f) => ({
+      ...f,
+      created_at: f.created_at || now,
+      updated_at: now,
+    }));
+    await Promise.all(records.map((f) => storage.set(fragranceKey(f.id), f)));
+    await writeIndex([...existingIds, ...records.map((f) => f.id)]);
+  }
 
-  const nextIndex = seeded.map((f) => f.id);
-  await writeIndex(nextIndex);
-
-  const added = nextIndex.filter((id) => !existingIds.has(id)).length;
   return {
-    added,
-    refreshed: nextIndex.length - added,
-    count: nextIndex.length,
+    added: toAdd.length,
+    skipped: fragrances.length - toAdd.length,
+    count: existingIds.size + toAdd.length,
   };
 }
