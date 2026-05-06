@@ -25,9 +25,16 @@ leaving monday.
   and past-SLA list. Derived from `activity_logs`, no extra board columns
   needed. SLA clock stops at Ship so transit doesn't penalize production.
 
+- **Inventory view** — tabbed CRUD interface for managing the fragrance
+  catalog. Add, view, and delete fragrances backed by monday Storage.
+
 - **Fragrance CRUD API** — Express service on monday-code backed by
   `@mondaycom/apps-sdk` Storage. Seeds 16 fragrances on boot. Falls back
   to in-memory for local dev.
+
+- **Theme support** — automatically responds to monday's platform themes
+  (Light, Dark, Black, Hacker). Uses Vibe's CSS token classes with
+  scoped overrides where needed.
 
 - **Automation** — no-code automation: when status changes to "New Order",
   notify board subscribers.
@@ -132,9 +139,6 @@ In Developer Center → **Build → OAuth & Permissions**:
 
 - **Custom intake form builder** Let admins define their own order
   fields without code changes.
-
-- **Inventory management UI** A CRUD interface for managing raw
-  materials and stock levels alongside the fragrance catalog.
 
 - **Shipping integration** Connect to UPS / FedEx APIs to auto-track
   shipments and surface delivery status on the board.
