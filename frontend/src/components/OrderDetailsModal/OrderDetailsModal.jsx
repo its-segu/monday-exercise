@@ -70,11 +70,17 @@ export default function OrderDetailsModal({ show, order, onClose }) {
   const handleCloseRecipe = useCallback(() => setRecipeIndex(null), []);
 
   useEffect(() => {
-    const el = slideContainerRef.current?.closest('[role="dialog"]');
-    if (el) {
-      const scrollable = el.querySelector('[class*="modalContent"], [class*="ModalContent"]') || el;
-      scrollable.scrollTop = 0;
+    const container = slideContainerRef.current;
+    if (!container) return;
+    let el = container.parentElement;
+    while (el) {
+      if (el.scrollTop > 0) {
+        el.scrollTop = 0;
+      }
+      if (el.getAttribute("role") === "dialog") break;
+      el = el.parentElement;
     }
+    if (el) el.scrollTop = 0;
   }, [recipeIndex]);
 
   const handleOpenInMonday = useCallback(() => {
